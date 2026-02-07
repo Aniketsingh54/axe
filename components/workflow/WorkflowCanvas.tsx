@@ -189,13 +189,23 @@ export default function WorkflowCanvas() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to save');
+      if (!response.ok) {
+        const text = await response.text();
+        let errorMessage = 'Failed to save';
+        try {
+          const errJson = JSON.parse(text);
+          errorMessage = errJson.error || errorMessage;
+        } catch {
+          errorMessage = text || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
 
       const savedWorkflow = await response.json();
       setWorkflowId(savedWorkflow.id);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Save failed:', error);
-      alert('Failed to save workflow');
+      alert(`Failed to save workflow: ${error.message}`);
     } finally {
       setIsSaving(false);
     }
@@ -230,8 +240,15 @@ export default function WorkflowCanvas() {
       });
 
       if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || `HTTP error! status: ${response.status}`);
+        const text = await response.text();
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errJson = JSON.parse(text);
+          errorMessage = errJson.error || errorMessage;
+        } catch {
+          errorMessage = text || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -312,8 +329,15 @@ export default function WorkflowCanvas() {
       });
 
       if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || `HTTP error! status: ${response.status}`);
+        const text = await response.text();
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errJson = JSON.parse(text);
+          errorMessage = errJson.error || errorMessage;
+        } catch {
+          errorMessage = text || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -392,8 +416,15 @@ export default function WorkflowCanvas() {
       });
 
       if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || `HTTP error! status: ${response.status}`);
+        const text = await response.text();
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errJson = JSON.parse(text);
+          errorMessage = errJson.error || errorMessage;
+        } catch {
+          errorMessage = text || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
