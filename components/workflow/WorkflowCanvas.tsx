@@ -200,8 +200,8 @@ export default function WorkflowCanvas() {
     [screenToFlowPosition, addNode]
   );
 
-  const handleSaveWorkflow = async () => {
-    if (isSaving) return;
+  const handleSaveWorkflow = async (): Promise<string | null> => {
+    if (isSaving) return workflowId;
     setIsSaving(true);
     try {
       const response = await fetch('/api/workflows', {
@@ -229,9 +229,11 @@ export default function WorkflowCanvas() {
 
       const savedWorkflow = await response.json();
       setWorkflowId(savedWorkflow.id);
+      return savedWorkflow.id;
     } catch (error: any) {
       console.error('Save failed:', error);
       alert(`Failed to save workflow: ${error.message}`);
+      return null;
     } finally {
       setIsSaving(false);
     }
@@ -241,7 +243,8 @@ export default function WorkflowCanvas() {
   const handleRunSingleNode = async (targetNodeId: string) => {
     if (isRunning) return;
 
-    await handleSaveWorkflow();
+    const savedId = await handleSaveWorkflow();
+    if (!savedId) return;
 
     setIsRunning(true);
     setGlobalIsRunning(true);
@@ -258,7 +261,7 @@ export default function WorkflowCanvas() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          workflowId,
+          workflowId: savedId,
           nodes: getCleanNodes(nodes),
           edges,
           targetNodeId,
@@ -330,7 +333,8 @@ export default function WorkflowCanvas() {
   const handleRunSelectedNodes = async () => {
     if (isRunning || selectedNodeIds.length === 0) return;
 
-    await handleSaveWorkflow();
+    const savedId = await handleSaveWorkflow();
+    if (!savedId) return;
 
     setIsRunning(true);
     setGlobalIsRunning(true);
@@ -347,7 +351,7 @@ export default function WorkflowCanvas() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          workflowId,
+          workflowId: savedId,
           nodes: getCleanNodes(nodes),
           edges,
           targetNodeIds: selectedNodeIds,
@@ -420,7 +424,8 @@ export default function WorkflowCanvas() {
   const handleRunWorkflow = async () => {
     if (isRunning) return;
 
-    await handleSaveWorkflow();
+    const savedId = await handleSaveWorkflow();
+    if (!savedId) return;
 
     setIsRunning(true);
     setGlobalIsRunning(true);
@@ -438,7 +443,7 @@ export default function WorkflowCanvas() {
       const response = await fetch('/api/run-workflow', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workflowId, nodes: getCleanNodes(nodes), edges }),
+        body: JSON.stringify({ workflowId: savedId, nodes: getCleanNodes(nodes), edges }),
       });
 
       if (!response.ok) {
