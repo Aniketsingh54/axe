@@ -22,18 +22,31 @@ import { isValidConnection as validateConnection } from '@/lib/graph';
 
 import '@xyflow/react/dist/style.css';
 
-// Helper to strip runtime data from nodes to reduce API payload size
-const getCleanNodes = (nodes: Node[]) => nodes.map(node => ({
-  id: node.id,
-  type: node.type,
-  position: node.position,
-  data: {
-    ...node.data,
-    output: undefined,
-    error: undefined,
-    isRunning: undefined,
-  },
-}));
+// Helper to strip runtime data and large base64 URLs from nodes to reduce API payload size
+const getCleanNodes = (nodes: Node[]) => nodes.map(node => {
+  const data = { ...node.data };
+
+  // Remove runtime fields
+  delete data.output;
+  delete data.error;
+  delete data.isRunning;
+
+  // Strip base64 data URLs (they're too large for Vercel's serverless functions)
+  // Keep only external URLs (http/https)
+  if (typeof data.imageUrl === 'string' && data.imageUrl.startsWith('data:')) {
+    data.imageUrl = '[base64-stripped]';
+  }
+  if (typeof data.videoUrl === 'string' && data.videoUrl.startsWith('data:')) {
+    data.videoUrl = '[base64-stripped]';
+  }
+
+  return {
+    id: node.id,
+    type: node.type,
+    position: node.position,
+    data,
+  };
+});
 
 export default function WorkflowCanvas() {
   const {
