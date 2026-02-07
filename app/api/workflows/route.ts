@@ -6,7 +6,7 @@ export async function GET() {
     try {
         const { userId } = await auth();
         if (!userId) {
-            return new NextResponse('Unauthorized', { status: 401 });
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const workflows = await prisma.workflow.findMany({
@@ -17,7 +17,7 @@ export async function GET() {
         return NextResponse.json(workflows);
     } catch (error) {
         console.error('Failed to fetch workflows:', error);
-        return new NextResponse('Internal Server Error', { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
 
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     try {
         const { userId } = await auth();
         if (!userId) {
-            return new NextResponse('Unauthorized', { status: 401 });
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const body = await req.json();
@@ -59,6 +59,6 @@ export async function POST(req: Request) {
         return NextResponse.json(workflow);
     } catch (error) {
         console.error('Failed to save workflow:', error);
-        return new NextResponse('Internal Server Error', { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

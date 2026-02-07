@@ -6,7 +6,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     try {
         const { userId } = await auth();
         if (!userId) {
-            return new NextResponse('Unauthorized', { status: 401 });
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const { id } = await params;
@@ -17,11 +17,11 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         });
 
         if (!workflow) {
-            return new NextResponse('Workflow not found', { status: 404 });
+            return NextResponse.json({ error: 'Workflow not found' }, { status: 404 });
         }
 
         if (workflow.userId !== userId) {
-            return new NextResponse('Forbidden', { status: 403 });
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
         // Delete associated runs first (cascade)
@@ -38,6 +38,6 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     } catch (error) {
         console.error('Failed to delete workflow:', error);
-        return new NextResponse('Internal Server Error', { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
