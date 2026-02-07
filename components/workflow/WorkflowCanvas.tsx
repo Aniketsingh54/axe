@@ -178,13 +178,26 @@ export default function WorkflowCanvas() {
     if (isSaving) return;
     setIsSaving(true);
     try {
+      // Strip runtime data (output, error, isRunning) to reduce payload size
+      const cleanNodes = nodes.map(node => ({
+        id: node.id,
+        type: node.type,
+        position: node.position,
+        data: {
+          ...node.data,
+          output: undefined,
+          error: undefined,
+          isRunning: undefined,
+        },
+      }));
+
       const response = await fetch('/api/workflows', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: workflowId,
           name: 'My Workflow',
-          nodes,
+          nodes: cleanNodes,
           edges,
         }),
       });
