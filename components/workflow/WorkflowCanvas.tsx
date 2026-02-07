@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import {
   ReactFlow,
   Background,
@@ -16,9 +16,8 @@ import {
 } from '@xyflow/react';
 import { useStore } from '@/hooks/useStore';
 import { nodeTypes } from './config';
-import { Play, Square, Save, Loader2, Terminal } from 'lucide-react';
+import { Play, Save, Loader2 } from 'lucide-react';
 import { isValidConnection as validateConnection } from '@/lib/graph';
-import ExecutionLogsPanel from '@/components/sidebar/ExecutionLogsPanel';
 
 import '@xyflow/react/dist/style.css';
 
@@ -37,11 +36,20 @@ export default function WorkflowCanvas() {
     addExecutionLog,
     clearExecutionLogs,
     setIsRunning: setGlobalIsRunning,
+    pendingNodeRun,
+    setPendingNodeRun,
   } = useStore();
   const { screenToFlowPosition } = useReactFlow();
   const [isRunning, setIsRunning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [showLogs, setShowLogs] = useState(false);
+
+  // Handle single node execution when pendingNodeRun is set
+  useEffect(() => {
+    if (pendingNodeRun && !isRunning) {
+      handleRunSingleNode(pendingNodeRun);
+      setPendingNodeRun(null);
+    }
+  }, [pendingNodeRun]);
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -164,7 +172,8 @@ export default function WorkflowCanvas() {
     }
   };
 
-  const handleRunWorkflow = async () => {
+  // Single node execution (with dependencies)
+  const handleRunSingleNode = async (targetNodeId: string) => {
     if (isRunning) return;
 
     // Auto-save before running
@@ -172,7 +181,92 @@ export default function WorkflowCanvas() {
 
     setIsRunning(true);
     setGlobalIsRunning(true);
-    setShowLogs(true); // Auto-open logs panel
+    clearExecutionLogs();
+
+    const targetNode = nodes.find(n => n.id === targetNodeId);
+    const nodeName = targetNode?.type || 'Node';
+
+    addExecutionLog({ level: 'info', message: `Running single node: ${nodeName} (with dependencies)...` });
+
+    // Set target node to running state
+    updateNodeData(targetNodeId, { isRunning: true, error: undefined, output: undefined });
+
+    try {
+      const response = await fetch('/api/run-workflow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workflowId,
+          nodes,
+          edges,
+          targetNodeId, // This triggers single node execution
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Single node execution result:', result);
+      refreshHistory();
+
+      // Update nodes with results
+      if (result.results) {
+        result.results.forEach((nodeResult: any) => {
+          const nodeInfo = nodes.find(n => n.id === nodeResult.nodeId);
+          const name = nodeInfo?.type || nodeResult.nodeId;
+
+          if (nodeResult.status === 'SUCCESS') {
+            addExecutionLog({
+              level: 'success',
+              nodeId: nodeResult.nodeId,
+              nodeName: name,
+              message: `Completed successfully`,
+            });
+          } else if (nodeResult.status === 'FAILED') {
+            addExecutionLog({
+              level: 'error',
+              nodeId: nodeResult.nodeId,
+              nodeName: name,
+              message: `Failed: ${nodeResult.error || 'Unknown error'}`,
+            });
+          }
+
+          updateNodeData(nodeResult.nodeId, {
+            isRunning: false,
+            output: nodeResult.outputs?.output,
+            error: nodeResult.error,
+          });
+        });
+      }
+
+      if (result.status === 'SUCCESS') {
+        addExecutionLog({ level: 'success', message: `Single node execution completed!` });
+      } else {
+        addExecutionLog({ level: 'warn', message: `Execution finished with status: ${result.status}` });
+      }
+
+    } catch (error: any) {
+      console.error('Error running single node:', error);
+      addExecutionLog({ level: 'error', message: `Execution failed: ${error.message}` });
+      updateNodeData(targetNodeId, { isRunning: false, error: error.message });
+    } finally {
+      setIsRunning(false);
+      setGlobalIsRunning(false);
+    }
+  };
+
+  const handleRunWorkflow = async () => {
+
+    if (isRunning) return;
+
+    // Auto-save before running
+    await handleSaveWorkflow();
+
+    setIsRunning(true);
+    setGlobalIsRunning(true);
     clearExecutionLogs(); // Clear previous logs
 
     addExecutionLog({ level: 'info', message: `Starting workflow execution with ${nodes.length} nodes...` });
@@ -281,17 +375,6 @@ export default function WorkflowCanvas() {
           {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
           {isRunning ? 'Running...' : 'Run Workflow'}
         </button>
-
-        <button
-          onClick={() => setShowLogs(!showLogs)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${showLogs
-              ? 'bg-wy-500/20 border border-wy-500/50 text-wy-400'
-              : 'bg-dark-bg border border-dark-border text-dark-text hover:bg-dark-border'
-            }`}
-          title="Toggle execution logs"
-        >
-          <Terminal className="w-4 h-4" />
-        </button>
       </div>
 
       <ReactFlow
@@ -321,9 +404,6 @@ export default function WorkflowCanvas() {
           className="bg-dark-surface border-dark-border"
         />
       </ReactFlow>
-
-      {/* Execution Logs Panel */}
-      <ExecutionLogsPanel isOpen={showLogs} onClose={() => setShowLogs(false)} />
     </div>
   );
 }

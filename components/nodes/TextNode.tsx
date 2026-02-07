@@ -22,21 +22,26 @@ const TextNode = memo(({ id, data, selected }: NodeProps<TextNodeType>) => {
   const text = (data.text as string) || '';
   const isRunning = (data.isRunning as boolean) || false;
   const updateNodeData = useStore((state) => state.updateNodeData);
+  const setPendingNodeRun = useStore((state) => state.setPendingNodeRun);
 
   const handleTextChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     updateNodeData(id, { text: e.target.value });
   }, [id, updateNodeData]);
 
+  const handleRunNode = useCallback(() => {
+    setPendingNodeRun(id);
+  }, [id, setPendingNodeRun]);
+
   return (
-    <BaseNode id={id} title="Text" icon={<Type className="w-3 h-3" />} selected={selected} isRunning={isRunning}>
+    <BaseNode id={id} title="Text" icon={<Type className="w-3 h-3" />} selected={selected} isRunning={isRunning} onRunNode={handleRunNode}>
       {/* Output Handle - Right side only */}
       <Handle type="source" position={Position.Right} className="!bg-wy-500 !w-2 !h-2 !border-0" />
 
-      <div>
+      <div className="flex flex-col gap-1">
         <label className="text-[9px] text-dark-text-muted uppercase tracking-wide">Content</label>
         <textarea
-          className="w-full p-1.5 text-[10px] border rounded resize-none bg-dark-bg border-dark-border text-dark-text placeholder-dark-text-muted focus:border-wy-500 focus:outline-none transition-colors"
-          rows={3}
+          className="w-full p-2 text-[11px] leading-relaxed border rounded resize-none bg-dark-bg border-dark-border text-dark-text placeholder-dark-text-muted focus:border-wy-500 focus:outline-none transition-colors"
+          rows={4}
           value={text}
           onChange={handleTextChange}
           placeholder="Enter your text here..."

@@ -31,6 +31,11 @@ const ExtractFrameNode = memo(({ id, data, selected }: NodeProps<ExtractFrameNod
   const error = (data.error as string) || '';
 
   const updateNodeData = useStore((state) => state.updateNodeData);
+  const setPendingNodeRun = useStore((state) => state.setPendingNodeRun);
+
+  const handleRunNode = useCallback(() => {
+    setPendingNodeRun(id);
+  }, [id, setPendingNodeRun]);
 
   // Check which handles are connected
   const videoConnections = useHandleConnections({ type: 'target', id: 'video_url' });
@@ -50,7 +55,7 @@ const ExtractFrameNode = memo(({ id, data, selected }: NodeProps<ExtractFrameNod
   }, [id, updateNodeData]);
 
   return (
-    <BaseNode id={id} title="Extract Frame" icon={<Film className="w-3 h-3" />} selected={selected} isRunning={isRunning}>
+    <BaseNode id={id} title="Extract Frame" icon={<Film className="w-3 h-3" />} selected={selected} isRunning={isRunning} onRunNode={handleRunNode}>
       {/* Input Handles - Left side */}
       <Handle
         type="target"

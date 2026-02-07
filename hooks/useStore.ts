@@ -41,6 +41,9 @@ type AppState = {
   clearExecutionLogs: () => void;
   isRunning: boolean;
   setIsRunning: (running: boolean) => void;
+  // Single node execution
+  pendingNodeRun: string | null;
+  setPendingNodeRun: (nodeId: string | null) => void;
 };
 
 export const useStore = create<AppState>((set, get) => ({
@@ -50,6 +53,8 @@ export const useStore = create<AppState>((set, get) => ({
   historyTrigger: 0,
   executionLogs: [],
   isRunning: false,
+  pendingNodeRun: null,
+  setPendingNodeRun: (nodeId) => set({ pendingNodeRun: nodeId }),
   setIsRunning: (running) => set({ isRunning: running }),
   addExecutionLog: (log) => set((state) => ({
     executionLogs: [...state.executionLogs, {

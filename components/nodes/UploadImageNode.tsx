@@ -1,5 +1,6 @@
 'use client';
 
+
 import { memo, useRef, useState, useCallback } from 'react';
 import { Handle, Position, NodeProps, Node } from '@xyflow/react';
 import { Image, Upload, X, Loader2 } from 'lucide-react';
@@ -30,6 +31,11 @@ const UploadImageNode = memo(({ id, data, selected }: NodeProps<UploadImageNodeT
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const updateNodeData = useStore((state) => state.updateNodeData);
+  const setPendingNodeRun = useStore((state) => state.setPendingNodeRun);
+
+  const handleRunNode = useCallback(() => {
+    setPendingNodeRun(id);
+  }, [id, setPendingNodeRun]);
 
   const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -77,7 +83,7 @@ const UploadImageNode = memo(({ id, data, selected }: NodeProps<UploadImageNodeT
   }, []);
 
   return (
-    <BaseNode id={id} title="Upload Image" icon={<Image className="w-3 h-3" />} selected={selected} isRunning={isRunning}>
+    <BaseNode id={id} title="Upload Image" icon={<Image className="w-3 h-3" />} selected={selected} isRunning={isRunning} onRunNode={handleRunNode}>
       {/* Output Handle - Right side only */}
       <Handle type="source" position={Position.Right} className="!bg-wy-500 !w-2 !h-2 !border-0" />
 
@@ -97,7 +103,7 @@ const UploadImageNode = memo(({ id, data, selected }: NodeProps<UploadImageNodeT
           <div className="w-full h-1 bg-dark-border rounded-full overflow-hidden">
             <div
               className="h-full bg-wy-500 transition-all duration-300"
-              style={{ width: `${uploadProgress}%` }}
+              style={{ width: `${uploadProgress}% ` }}
             />
           </div>
         </div>

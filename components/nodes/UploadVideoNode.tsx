@@ -30,6 +30,11 @@ const UploadVideoNode = memo(({ id, data, selected }: NodeProps<UploadVideoNodeT
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const updateNodeData = useStore((state) => state.updateNodeData);
+  const setPendingNodeRun = useStore((state) => state.setPendingNodeRun);
+
+  const handleRunNode = useCallback(() => {
+    setPendingNodeRun(id);
+  }, [id, setPendingNodeRun]);
 
   const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -81,7 +86,7 @@ const UploadVideoNode = memo(({ id, data, selected }: NodeProps<UploadVideoNodeT
   }, []);
 
   return (
-    <BaseNode id={id} title="Upload Video" icon={<Video className="w-3 h-3" />} selected={selected} isRunning={isRunning}>
+    <BaseNode id={id} title="Upload Video" icon={<Video className="w-3 h-3" />} selected={selected} isRunning={isRunning} onRunNode={handleRunNode}>
       {/* Output Handle - Right side only */}
       <Handle type="source" position={Position.Right} className="!bg-wy-500 !w-2 !h-2 !border-0" />
 

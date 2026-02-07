@@ -31,6 +31,11 @@ const LLMNode = memo(({ id, data, selected }: NodeProps<LLMNodeType>) => {
   const error = (data.error as string) || '';
 
   const updateNodeData = useStore((state) => state.updateNodeData);
+  const setPendingNodeRun = useStore((state) => state.setPendingNodeRun);
+
+  const handleRunNode = useCallback(() => {
+    setPendingNodeRun(id);
+  }, [id, setPendingNodeRun]);
 
   // Check which handles are connected
   const systemConnections = useHandleConnections({ type: 'target', id: 'system_prompt' });
@@ -54,7 +59,7 @@ const LLMNode = memo(({ id, data, selected }: NodeProps<LLMNodeType>) => {
   }, [id, updateNodeData]);
 
   return (
-    <BaseNode id={id} title="Run Any LLM" icon={<Sparkles className="w-3 h-3" />} selected={selected} isRunning={isRunning}>
+    <BaseNode id={id} title="Run Any LLM" icon={<Sparkles className="w-3 h-3" />} selected={selected} isRunning={isRunning} onRunNode={handleRunNode}>
       {/* Input Handles - Left side */}
       <Handle
         type="target"

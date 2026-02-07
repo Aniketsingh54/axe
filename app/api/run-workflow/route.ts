@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { workflowId, nodes, edges } = body;
+    const { workflowId, nodes, edges, targetNodeId } = body;
 
     // Validate workflow ownership if ID is provided
     if (workflowId) {
@@ -31,8 +31,15 @@ export async function POST(req: Request) {
     // Initialize Engine
     const engine = new WorkflowEngine(workflowId || 'temp', nodes, edges);
 
-    // Run Workflow
-    const result = await engine.run();
+    // Run Workflow or Single Node
+    let result;
+    if (targetNodeId) {
+      // Run single node with its dependencies
+      result = await engine.runNode(targetNodeId);
+    } else {
+      // Run full workflow
+      result = await engine.run();
+    }
 
     return NextResponse.json(result);
 

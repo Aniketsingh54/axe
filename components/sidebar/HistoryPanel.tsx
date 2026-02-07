@@ -1,15 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Clock, RotateCcw, Play, FileText, ChevronDown, ChevronUp, CheckCircle, XCircle, Loader2 } from 'lucide-react';
-import { useStore } from '@/hooks/useStore';
+import { useEffect, useState, useRef } from 'react';
+import { Clock, RotateCcw, ChevronDown, ChevronUp, CheckCircle, XCircle, Terminal, Info, AlertCircle, AlertTriangle, Trash2 } from 'lucide-react';
+import { useStore, type ExecutionLog } from '@/hooks/useStore';
 
 interface NodeResult {
   id: string;
   nodeId: string;
   nodeType: string;
   status: 'SUCCESS' | 'FAILED';
-  output: any;
+  input?: any;
+  output?: any;
   error?: string;
   startedAt: string;
   endedAt: string;
@@ -25,11 +26,62 @@ interface Run {
   results: NodeResult[];
 }
 
+const LogIcon = ({ level }: { level: ExecutionLog['level'] }) => {
+  switch (level) {
+    case 'success':
+      return <CheckCircle className="w-3 h-3 text-green-400 shrink-0" />;
+    case 'error':
+      return <AlertCircle className="w-3 h-3 text-red-400 shrink-0" />;
+    case 'warn':
+      return <AlertTriangle className="w-3 h-3 text-yellow-400 shrink-0" />;
+    default:
+      return <Info className="w-3 h-3 text-blue-400 shrink-0" />;
+  }
+};
+
+const formatTime = (date: Date) => {
+  return date.toLocaleTimeString('en-US', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+};
+
+const calcDuration = (start: string, end: string) => {
+  const ms = new Date(end).getTime() - new Date(start).getTime();
+  return (ms / 1000).toFixed(1) + 's';
+};
+
+const formatOutput = (value: any): string => {
+  if (!value) return '—';
+  if (typeof value === 'string') {
+    return value.length > 60 ? value.slice(0, 60) + '...' : value;
+  }
+  return JSON.stringify(value).slice(0, 60) + '...';
+};
+
 export default function HistoryPanel() {
-  const { workflowId, historyTrigger } = useStore();
+  const { workflowId, historyTrigger, executionLogs, clearExecutionLogs, isRunning } = useStore();
   const [runs, setRuns] = useState<Run[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
+  const [showLiveLogs, setShowLiveLogs] = useState(true);
+  const [displayLimit, setDisplayLimit] = useState(5);
+  const logsRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll logs
+  useEffect(() => {
+    if (logsRef.current && isRunning) {
+      logsRef.current.scrollTop = logsRef.current.scrollHeight;
+    }
+  }, [executionLogs, isRunning]);
+
+  // Auto-expand live logs when running
+  useEffect(() => {
+    if (isRunning) {
+      setShowLiveLogs(true);
+    }
+  }, [isRunning]);
 
   const fetchHistory = async () => {
     if (!workflowId) return;
@@ -79,6 +131,9 @@ export default function HistoryPanel() {
     }
   };
 
+  const displayedRuns = runs.slice(0, displayLimit);
+  const hasMoreRuns = runs.length > displayLimit;
+
   if (!workflowId) {
     return (
       <div className="p-4 h-full flex flex-col items-center justify-center text-dark-text-muted text-center">
@@ -90,7 +145,8 @@ export default function HistoryPanel() {
 
   return (
     <div className="p-4 h-full flex flex-col bg-dark-surface border-l border-dark-border">
-      <div className="flex items-center justify-between mb-4">
+      {/* Runs History Section - TOP */}
+      <div className="flex items-center justify-between mb-3 shrink-0">
         <h2 className="text-sm font-semibold text-dark-text uppercase tracking-wide">Runs History</h2>
         <button
           onClick={fetchHistory}
@@ -101,94 +157,171 @@ export default function HistoryPanel() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar min-h-[120px]">
         {runs.length === 0 ? (
-          <div className="text-center py-8 text-xs text-dark-text-muted">
+          <div className="text-center py-6 text-xs text-dark-text-muted">
             No runs yet. Click "Run Workflow" to start.
           </div>
         ) : (
-          runs.map((run) => (
-            <div
-              key={run.id}
-              className={`rounded-lg border transition-colors ${getStatusColor(run.status)}`}
-            >
+          <>
+            {displayedRuns.map((run) => (
               <div
-                className="p-3 cursor-pointer hover:bg-white/5 transition-colors"
-                onClick={() => toggleExpand(run.id)}
+                key={run.id}
+                className={`rounded-lg border transition-colors ${getStatusColor(run.status)}`}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {getStatusBadge(run.status)}
-                    <span className="text-[10px] text-dark-text-muted flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {formatDate(run.createdAt)}
-                    </span>
-                  </div>
-                  {expandedRunId === run.id ? (
-                    <ChevronUp className="w-3.5 h-3.5 text-dark-text-muted" />
-                  ) : (
-                    <ChevronDown className="w-3.5 h-3.5 text-dark-text-muted" />
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between text-xs text-dark-text">
-                  <span className="font-medium truncate max-w-[120px]">
-                    Run #{run.id.slice(0, 8)}
-                  </span>
-                  <div className="flex items-center gap-2 text-[10px] text-dark-text-muted">
-                    <span>{run.triggerType}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Expanded Details */}
-              {expandedRunId === run.id && (
-                <div className="p-3 pt-0 border-t border-white/5 space-y-2">
-                  <div className="text-[10px] font-semibold text-dark-text-muted uppercase tracking-wide mt-2 mb-1">
-                    Node Executions
-                  </div>
-                  {run.results && run.results.length > 0 ? (
-                    run.results.map((result) => (
-                      <div key={result.id} className="flex flex-col gap-1 p-2 rounded bg-dark-bg/50 border border-white/5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-dark-text flex items-center gap-1.5">
-                            {result.status === 'SUCCESS' ? (
-                              <CheckCircle className="w-3 h-3 text-green-400" />
-                            ) : (
-                              <XCircle className="w-3 h-3 text-red-400" />
-                            )}
-                            {result.nodeType}
-                          </span>
-                          <span className="text-[10px] text-dark-text-muted font-mono">
-                            {result.nodeId.split('-')[0]}...
-                          </span>
-                        </div>
-                        {result.output && (
-                          <div className="mt-1 text-[10px] text-dark-text-muted bg-dark-bg p-1.5 rounded border border-white/5 overflow-hidden">
-                            <div className="truncate opacity-80">Output:</div>
-                            <div className="font-mono text-dark-text break-all line-clamp-2">
-                              {typeof result.output === 'object'
-                                ? JSON.stringify(result.output)
-                                : String(result.output)}
-                            </div>
-                          </div>
-                        )}
-                        {result.error && (
-                          <div className="mt-1 text-[10px] text-red-400 bg-red-900/10 p-1.5 rounded border border-red-500/20">
-                            Error: {result.error}
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-[10px] text-dark-text-muted italic">
-                      No node results logged yet.
+                <div
+                  className="p-2.5 cursor-pointer hover:bg-white/5 transition-colors"
+                  onClick={() => toggleExpand(run.id)}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(run.status)}
+                      <span className="text-[10px] text-dark-text-muted flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {formatDate(run.createdAt)}
+                      </span>
                     </div>
-                  )}
+                    {expandedRunId === run.id ? (
+                      <ChevronUp className="w-3.5 h-3.5 text-dark-text-muted" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5 text-dark-text-muted" />
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-dark-text">
+                    <span className="font-medium truncate max-w-[120px]">
+                      Run #{run.id.slice(0, 8)}
+                    </span>
+                    <span className="text-[10px] text-dark-text-muted">{run.triggerType}</span>
+                  </div>
                 </div>
-              )}
-            </div>
-          ))
+
+                {/* Expanded Details */}
+                {expandedRunId === run.id && (
+                  <div className="p-2.5 pt-0 border-t border-white/5 space-y-1.5">
+                    <div className="text-[10px] font-semibold text-dark-text-muted uppercase tracking-wide mt-1.5 mb-1">
+                      Node Executions ({run.results?.length || 0} nodes)
+                    </div>
+                    {run.results && run.results.length > 0 ? (
+                      run.results.map((result) => (
+                        <div key={result.id} className="flex flex-col gap-1 p-1.5 rounded bg-dark-bg/50 border border-white/5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-medium text-dark-text flex items-center gap-1">
+                              {result.status === 'SUCCESS' ? (
+                                <CheckCircle className="w-3 h-3 text-green-400" />
+                              ) : (
+                                <XCircle className="w-3 h-3 text-red-400" />
+                              )}
+                              {result.nodeType}
+                            </span>
+                            <span className="text-[9px] text-dark-text-muted font-mono">
+                              {calcDuration(result.startedAt, result.endedAt)}
+                            </span>
+                          </div>
+                          {/* Show output */}
+                          {result.output && (
+                            <div className="text-[9px] text-green-400/80 bg-green-900/10 px-1.5 py-0.5 rounded truncate">
+                              Output: {formatOutput(result.output?.output || result.output)}
+                            </div>
+                          )}
+                          {result.error && (
+                            <div className="text-[9px] text-red-400 bg-red-900/10 px-1.5 py-0.5 rounded truncate">
+                              Error: {result.error}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-[10px] text-dark-text-muted italic">
+                        No node results.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+
+
+            {/* Load More Button */}
+            {hasMoreRuns && (
+              <button
+                onClick={() => setDisplayLimit(prev => prev + 5)}
+                className="w-full py-2 text-xs text-wy-400 hover:text-wy-300 hover:bg-wy-500/10 rounded-lg border border-dashed border-wy-500/30 transition-colors"
+              >
+                Load More ({runs.length - displayLimit} remaining)
+              </button>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Execution Logs Section - BOTTOM (Flexible) */}
+      <div className="mt-4 rounded-lg border border-wy-500/30 bg-dark-bg/50 overflow-hidden flex flex-col min-h-[180px] max-h-[50%]">
+        <div
+          className="flex items-center justify-between px-3 py-2 bg-wy-500/10 cursor-pointer hover:bg-wy-500/20 transition-colors shrink-0"
+          onClick={() => setShowLiveLogs(!showLiveLogs)}
+        >
+          <div className="flex items-center gap-2">
+            <Terminal className="w-3.5 h-3.5 text-wy-500" />
+            <span className="text-xs font-medium text-wy-400">Execution Logs</span>
+            {isRunning && (
+              <span className="w-1.5 h-1.5 bg-wy-500 rounded-full animate-pulse" />
+            )}
+            <span className="text-[10px] text-dark-text-muted">({executionLogs.length})</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={(e) => { e.stopPropagation(); clearExecutionLogs(); }}
+              className="p-1 hover:bg-dark-border rounded text-dark-text-muted hover:text-dark-text transition-colors"
+              title="Clear logs"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+            {showLiveLogs ? (
+              <ChevronUp className="w-3.5 h-3.5 text-dark-text-muted" />
+            ) : (
+              <ChevronDown className="w-3.5 h-3.5 text-dark-text-muted" />
+            )}
+          </div>
+        </div>
+
+        {showLiveLogs && (
+          <div
+            ref={logsRef}
+            className="flex-1 overflow-y-auto p-2 space-y-1 font-mono text-[10px]"
+          >
+            {executionLogs.length === 0 ? (
+              <div className="text-dark-text-muted text-center py-4">
+                Run a workflow to see execution logs here.
+              </div>
+            ) : (
+              executionLogs.map((log) => (
+                <div
+                  key={log.id}
+                  className={`flex items-start gap-1.5 px-1.5 py-0.5 rounded ${log.level === 'error' ? 'bg-red-500/10' :
+                    log.level === 'success' ? 'bg-green-500/10' :
+                      log.level === 'warn' ? 'bg-yellow-500/10' :
+                        ''
+                    }`}
+                >
+                  <span className="text-dark-text-muted shrink-0">
+                    {formatTime(log.timestamp)}
+                  </span>
+                  <LogIcon level={log.level} />
+                  {log.nodeName && (
+                    <span className="text-wy-400 shrink-0">[{log.nodeName}]</span>
+                  )}
+                  <span className={`break-all ${log.level === 'error' ? 'text-red-400' :
+                    log.level === 'success' ? 'text-green-400' :
+                      log.level === 'warn' ? 'text-yellow-400' :
+                        'text-dark-text'
+                    }`}>
+                    {log.message}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
         )}
       </div>
     </div>

@@ -7,7 +7,7 @@ interface NodeRun {
     type: string;
     inputs?: Record<string, unknown>;
     outputs?: Record<string, unknown>;
-    status: 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED';
+    status: 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED' | 'SKIPPED';
     error?: string;
     startedAt?: Date;
     endedAt?: Date;
@@ -19,6 +19,8 @@ interface WorkflowRunContext {
     nodes: Node[];
     edges: Edge[];
     nodeRuns: Map<string, NodeRun>;
+    triggerType: 'FULL' | 'SINGLE' | 'PARTIAL';
+    targetNodeIds?: string[];
 }
 
 export class WorkflowEngine {
@@ -31,18 +33,43 @@ export class WorkflowEngine {
             nodes,
             edges,
             nodeRuns: new Map(),
+            triggerType: 'FULL',
         };
     }
 
-    // Initialize all nodes as PENDING
-    private initialize() {
+    // Initialize all nodes as PENDING (or SKIPPED if not in target set)
+    private initialize(targetNodeIds?: string[]) {
         this.context.nodes.forEach(node => {
+            const shouldRun = !targetNodeIds || targetNodeIds.includes(node.id);
             this.context.nodeRuns.set(node.id, {
                 nodeId: node.id,
                 type: node.type || 'default',
-                status: 'PENDING',
+                status: shouldRun ? 'PENDING' : 'SKIPPED',
             });
         });
+    }
+
+    // Get all upstream nodes (dependencies) for a given node using BFS
+    private getUpstreamNodes(targetNodeId: string): string[] {
+        const upstreamIds = new Set<string>();
+        const queue = [targetNodeId];
+
+        // Always include the target node
+        upstreamIds.add(targetNodeId);
+
+        while (queue.length > 0) {
+            const currentId = queue.shift()!;
+            const incomingEdges = this.context.edges.filter(e => e.target === currentId);
+
+            for (const edge of incomingEdges) {
+                if (!upstreamIds.has(edge.source)) {
+                    upstreamIds.add(edge.source);
+                    queue.push(edge.source);
+                }
+            }
+        }
+
+        return Array.from(upstreamIds);
     }
 
     // Get input values from upstream nodes
@@ -74,7 +101,7 @@ export class WorkflowEngine {
     // Execute a single node
     private async executeNode(nodeId: string): Promise<void> {
         const nodeRun = this.context.nodeRuns.get(nodeId);
-        if (!nodeRun) return;
+        if (!nodeRun || nodeRun.status === 'SKIPPED') return;
 
         nodeRun.status = 'RUNNING';
         nodeRun.startedAt = new Date();
@@ -93,7 +120,6 @@ export class WorkflowEngine {
 
             console.log(`Executing node ${nodeId} (${node.type}) with inputs:`, inputs);
 
-            // Execution Logic based on Node Type
             // Execution Logic based on Node Type
             switch (node.type) {
                 case 'text':
@@ -167,72 +193,91 @@ export class WorkflowEngine {
         }
     }
 
-    // Main execution loop (Topological Sort / Linear)
-    public async run(): Promise<any> {
-        this.initialize();
+    // Execute nodes in topological order (only nodes in targetNodeIds)
+    private async runTopological(targetNodeIds?: string[]): Promise<void> {
+        const visited = new Set<string>();
+        let hasRunningNodes = true;
 
-        // Create Run record in DB (PENDING)
+        while (hasRunningNodes) {
+            hasRunningNodes = false;
+
+            // Find runnable nodes:
+            // 1. Not visited
+            // 2. Status is PENDING (not SKIPPED)
+            // 3. All dependencies satisfied (incoming edges -> source SUCCESS or SKIPPED with cached output)
+            const runnableNodes = this.context.nodes.filter(node => {
+                if (visited.has(node.id)) return false;
+
+                const nodeRun = this.context.nodeRuns.get(node.id);
+                if (!nodeRun || nodeRun.status === 'SKIPPED') return false;
+
+                const incomingEdges = this.context.edges.filter(e => e.target === node.id);
+                const allDependenciesMet = incomingEdges.every(e => {
+                    const sourceRun = this.context.nodeRuns.get(e.source);
+                    return sourceRun && (sourceRun.status === 'SUCCESS' || sourceRun.status === 'SKIPPED');
+                });
+
+                return allDependenciesMet;
+            });
+
+            if (runnableNodes.length === 0) {
+                // If unvisited nodes remain but none runnable -> Cycle or disconnected
+                const pendingNodes = Array.from(this.context.nodeRuns.values()).filter(r => r.status === 'PENDING');
+                if (pendingNodes.length > 0) {
+                    console.warn(`${pendingNodes.length} nodes unreachable (cycles or missing dependencies)`);
+                    break;
+                }
+                break; // All done
+            }
+
+            // Run them in parallel
+            await Promise.all(runnableNodes.map(async (node) => {
+                await this.executeNode(node.id);
+                visited.add(node.id);
+            }));
+
+            if (runnableNodes.length > 0) {
+                hasRunningNodes = true;
+            }
+        }
+    }
+
+    // Run a single node with all its dependencies
+    public async runNode(targetNodeId: string): Promise<any> {
+        // Get all upstream dependencies
+        const nodesToRun = this.getUpstreamNodes(targetNodeId);
+
+        this.context.triggerType = 'SINGLE';
+        this.context.targetNodeIds = [targetNodeId];
+
+        // Initialize with only target nodes
+        this.initialize(nodesToRun);
+
+        // Create Run record in DB
         const runRecord = await prisma.run.create({
             data: {
                 id: this.context.runId,
                 workflowId: this.context.workflowId,
                 status: 'RUNNING',
-                triggerType: 'FULL',
-                // Provide empty object for results.create array currently empty
+                triggerType: 'SINGLE',
             },
         });
 
         try {
-            const visited = new Set<string>();
-            let hasRunningNodes = true;
+            await this.runTopological(nodesToRun);
 
-            while (hasRunningNodes) {
-                hasRunningNodes = false;
-
-                // Find runnable nodes:
-                // 1. Not visited
-                // 2. All dependencies satisfied (incoming edges -> source SUCCESS)
-                const runnableNodes = this.context.nodes.filter(node => {
-                    if (visited.has(node.id)) return false;
-
-                    const incomingEdges = this.context.edges.filter(e => e.target === node.id);
-                    const allDependenciesMet = incomingEdges.every(e => {
-                        const sourceRun = this.context.nodeRuns.get(e.source);
-                        return sourceRun && sourceRun.status === 'SUCCESS';
-                    });
-
-                    return allDependenciesMet;
-                });
-
-                if (runnableNodes.length === 0) {
-                    // If unvisited nodes remain but none runnable -> Cycle or disconnected
-                    const unvisitedCount = this.context.nodes.length - visited.size;
-                    if (unvisitedCount > 0) {
-                        console.warn(`${unvisitedCount} nodes unreachable (cycles or missing dependencies)`);
-                        break;
-                    }
-                    break; // All done
-                }
-
-                // Run them in parallel
-                await Promise.all(runnableNodes.map(async (node) => {
-                    await this.executeNode(node.id);
-                    visited.add(node.id);
-                }));
-
-                if (runnableNodes.length > 0) {
-                    hasRunningNodes = true;
-                }
-            }
-
-            // Final status check
-            const allSuccess = Array.from(this.context.nodeRuns.values()).every(r => r.status === 'SUCCESS');
+            // Final status check (only for nodes that ran)
+            const ranNodes = Array.from(this.context.nodeRuns.values()).filter(r => r.status !== 'SKIPPED');
+            const allSuccess = ranNodes.every(r => r.status === 'SUCCESS');
             const finalStatus = allSuccess ? 'SUCCESS' : 'FAILED';
-            const endTime = new Date();
 
             // Calculate duration
-            // (Mock duration for now, can improve)
-            const duration = 0;
+            const duration = ranNodes.reduce((acc, r) => {
+                if (r.startedAt && r.endedAt) {
+                    return acc + (r.endedAt.getTime() - r.startedAt.getTime());
+                }
+                return acc;
+            }, 0);
 
             // Update Run record with results
             await prisma.run.update({
@@ -241,11 +286,10 @@ export class WorkflowEngine {
                     status: finalStatus,
                     duration,
                     results: {
-                        create: Array.from(this.context.nodeRuns.values()).map(r => ({
+                        create: ranNodes.map(r => ({
                             nodeId: r.nodeId,
                             nodeType: r.type,
                             status: r.status,
-                            // Convert data to JSON compatible format
                             input: (r.inputs || {}) as any,
                             output: (r.outputs || {}) as any,
                             error: r.error,
@@ -259,6 +303,76 @@ export class WorkflowEngine {
             return {
                 runId: this.context.runId,
                 status: finalStatus,
+                triggerType: 'SINGLE',
+                targetNodeId,
+                results: ranNodes,
+            };
+
+        } catch (error) {
+            console.error('Single node execution failed:', error);
+            await prisma.run.update({
+                where: { id: this.context.runId },
+                data: { status: 'FAILED' },
+            });
+            throw error;
+        }
+    }
+
+    // Main execution loop (Full Workflow)
+    public async run(): Promise<any> {
+        this.context.triggerType = 'FULL';
+        this.initialize();
+
+        // Create Run record in DB (PENDING)
+        const runRecord = await prisma.run.create({
+            data: {
+                id: this.context.runId,
+                workflowId: this.context.workflowId,
+                status: 'RUNNING',
+                triggerType: 'FULL',
+            },
+        });
+
+        try {
+            await this.runTopological();
+
+            // Final status check
+            const allSuccess = Array.from(this.context.nodeRuns.values()).every(r => r.status === 'SUCCESS');
+            const finalStatus = allSuccess ? 'SUCCESS' : 'FAILED';
+
+            // Calculate duration
+            const duration = Array.from(this.context.nodeRuns.values()).reduce((acc, r) => {
+                if (r.startedAt && r.endedAt) {
+                    return acc + (r.endedAt.getTime() - r.startedAt.getTime());
+                }
+                return acc;
+            }, 0);
+
+            // Update Run record with results
+            await prisma.run.update({
+                where: { id: this.context.runId },
+                data: {
+                    status: finalStatus,
+                    duration,
+                    results: {
+                        create: Array.from(this.context.nodeRuns.values()).map(r => ({
+                            nodeId: r.nodeId,
+                            nodeType: r.type,
+                            status: r.status,
+                            input: (r.inputs || {}) as any,
+                            output: (r.outputs || {}) as any,
+                            error: r.error,
+                            startedAt: r.startedAt || new Date(),
+                            endedAt: r.endedAt || new Date(),
+                        })),
+                    },
+                },
+            });
+
+            return {
+                runId: this.context.runId,
+                status: finalStatus,
+                triggerType: 'FULL',
                 results: Array.from(this.context.nodeRuns.values()),
             };
 
