@@ -1,3 +1,80 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+    /* Weavy theme colors */
+    --color-wy-50: #eef2ff;
+    --color-wy-100: #e0e7ff;
+    --color-wy-200: #c7d2fe;
+    --color-wy-400: #818cf8;
+    --color-wy-500: #6366f1;
+    --color-wy-600: #4f46e5;
+    --color-wy-900: #312e81;
+
+    /* Dark theme */
+    --color-dark-bg: #0d0d0d;
+    --color-dark-surface: #1a1a1a;
+    --color-dark-border: #2a2a2a;
+    --color-dark-muted: #3a3a3a;
+    --color-dark-text: #e5e5e5;
+    --color-dark-text-muted: #a3a3a3;
+}
+
+/* Global dark background */
+body {
+    background-color: var(--color-dark-bg);
+    color: var(--color-dark-text);
+}
+
+/* React Flow overrides for dark theme */
+.react-flow__controls {
+    background: #1a1a1a !important;
+    border: 1px solid #2a2a2a !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+}
+
+.react-flow__controls-button {
+    background: #1a1a1a !important;
+    border: none !important;
+    border-bottom: 1px solid #2a2a2a !important;
+    fill: #e5e5e5 !important;
+}
+
+.react-flow__controls-button:hover {
+    background: #3a3a3a !important;
+}
+
+.react-flow__controls-button:last-child {
+    border-bottom: none !important;
+}
+
+.react-flow__minimap {
+    background: #1a1a1a !important;
+    border: 1px solid #2a2a2a !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+}
+
+.react-flow__minimap-mask {
+    fill: rgba(0, 0, 0, 0.7) !important;
+}
+
+.react-flow__minimap-node {
+    fill: #6366f1 !important;
+}
+
+/* Attribution - hide or style */
+.react-flow__attribution {
+    display: none !important;
+}
+
+/* Edge styling */
+.react-flow__edge-path {
+    stroke: #6366f1 !important;
+}
+
+/* Selection box */
+.react-flow__selection {
+    background: rgba(99, 102, 241, 0.1) !important;
+    border: 1px solid #6366f1 !important;
+}
