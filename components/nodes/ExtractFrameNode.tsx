@@ -1,74 +1,126 @@
-import { memo } from 'react';
-import { Handle, Position, NodeProps } from '@xyflow/react';
-import { Film } from 'lucide-react';
-import BaseNode from './BaseNode';
+'use client';
 
-interface ExtractFrameNodeData {
-  timestamp?: string;
-  connectedVideo?: boolean;
-  connectedTimestamp?: boolean;
-  isRunning?: boolean;
+import { memo, useCallback } from 'react';
+import { Handle, Position, NodeProps, Node, useHandleConnections } from '@xyflow/react';
+import { Film, Loader2 } from 'lucide-react';
+import BaseNode from './BaseNode';
+import { useStore } from '@/hooks/useStore';
+
+interface ExtractFrameNodeData extends Record<string, unknown> {
+  timestamp?: number | string;
   output?: string;
+  isRunning?: boolean;
+  error?: string;
 }
 
+type ExtractFrameNodeType = Node<ExtractFrameNodeData>;
+
 /**
- * Extract Frame from Video Node - FFmpeg via Trigger.dev
- * Input Handles (2):
- *   1. video_url - Required, accepts video types (mp4, mov, webm, m4v)
- *   2. timestamp - Optional, seconds or "50%" for percentage, default 0
- * Output Handle (1):
- *   - output - Extracted frame image URL (jpg/png)
+ * Extract Frame Node - Extract a single frame from video
+ * Inputs: video_url, timestamp
+ * Output: Extracted frame image URL
+ * 
+ * Timestamp can be:
+ * - A number (seconds): 5.5 means 5.5 seconds into the video
+ * - A percentage string: "50%" means halfway through
  */
-const ExtractFrameNode = memo(({ id, data, selected }: NodeProps<ExtractFrameNodeData>) => {
-  const {
-    timestamp = '0',
-    connectedVideo = false,
-    connectedTimestamp = false,
-    isRunning = false,
-    output = ''
-  } = data || {};
+const ExtractFrameNode = memo(({ id, data, selected }: NodeProps<ExtractFrameNodeType>) => {
+  const timestamp = (data.timestamp as number | string) || 0;
+  const output = (data.output as string) || '';
+  const isRunning = (data.isRunning as boolean) || false;
+  const error = (data.error as string) || '';
+
+  const updateNodeData = useStore((state) => state.updateNodeData);
+
+  // Check which handles are connected
+  const videoConnections = useHandleConnections({ type: 'target', id: 'video_url' });
+  const timestampConnections = useHandleConnections({ type: 'target', id: 'timestamp' });
+
+  const connectedVideo = videoConnections.length > 0;
+  const connectedTimestamp = timestampConnections.length > 0;
+
+  const handleTimestampChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Allow percentage strings like "50%"
+    if (value.includes('%')) {
+      updateNodeData(id, { timestamp: value });
+    } else {
+      updateNodeData(id, { timestamp: parseFloat(value) || 0 });
+    }
+  }, [id, updateNodeData]);
 
   return (
     <BaseNode id={id} title="Extract Frame" icon={<Film className="w-3 h-3" />} selected={selected} isRunning={isRunning}>
-      {/* 2 Input Handles - Left side */}
-      <Handle type="target" position={Position.Left} id="video_url" className="!bg-wy-500 !w-2 !h-2 !border-0" style={{ top: '35%' }} />
-      <Handle type="target" position={Position.Left} id="timestamp" className="!bg-wy-500 !w-2 !h-2 !border-0" style={{ top: '65%' }} />
+      {/* Input Handles - Left side */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="video_url"
+        className="!bg-wy-500 !w-2 !h-2 !border-0"
+        style={{ top: '35%' }}
+      />
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="timestamp"
+        className="!bg-wy-500 !w-2 !h-2 !border-0"
+        style={{ top: '65%' }}
+      />
 
-      {/* Output Handle */}
+      {/* Output Handle - Right side */}
       <Handle type="source" position={Position.Right} className="!bg-wy-500 !w-2 !h-2 !border-0" />
 
       <div className="space-y-1.5">
-        {/* Video URL indicator */}
+        {/* Video Input */}
         <div>
           <label className="text-[9px] text-dark-text-muted flex items-center gap-1">
-            <span className="w-1 h-1 rounded-full bg-wy-500"></span>
-            Video URL *
+            <span className={`w-1 h-1 rounded-full ${connectedVideo ? 'bg-green-500' : 'bg-wy-500'}`}></span>
+            Video *
           </label>
-          <div className={`p-1 text-[9px] border rounded bg-dark-bg border-dark-border text-dark-text-muted ${connectedVideo ? 'border-wy-500' : ''}`}>
-            {connectedVideo ? "◀ Video connected" : "Connect video node →"}
+          <div className={`p-1 text-[9px] border rounded bg-dark-bg ${connectedVideo ? 'border-green-500/50 text-green-400' : 'border-dark-border text-dark-text-muted'}`}>
+            {connectedVideo ? "◀ Connected" : "Connect video →"}
           </div>
         </div>
 
-        {/* Timestamp input */}
+        {/* Timestamp Input */}
         <div>
           <label className="text-[9px] text-dark-text-muted flex items-center gap-1">
-            <span className="w-1 h-1 rounded-full bg-wy-500"></span>
-            Timestamp
+            <span className={`w-1 h-1 rounded-full ${connectedTimestamp ? 'bg-green-500' : 'bg-wy-500'}`}></span>
+            Timestamp (sec or %)
           </label>
           <input
             type="text"
-            className={`w-full p-1 text-[10px] border rounded bg-dark-bg border-dark-border text-dark-text placeholder-dark-text-muted ${connectedTimestamp ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`w-full p-1 text-[10px] border rounded bg-dark-bg border-dark-border text-dark-text placeholder-dark-text-muted focus:border-wy-500 focus:outline-none ${connectedTimestamp ? 'opacity-50 cursor-not-allowed' : ''}`}
             value={timestamp}
-            placeholder={connectedTimestamp ? "◀ Connected" : "e.g. 5.5 or 50%"}
+            placeholder="0 or 50%"
             disabled={connectedTimestamp}
-            onChange={() => { }}
+            onChange={handleTimestampChange}
           />
+          <div className="text-[8px] text-dark-text-muted mt-0.5">
+            e.g., 5 for 5sec or 50% for halfway
+          </div>
         </div>
 
-        {/* Output preview */}
-        {output && (
-          <div className="mt-1 p-1 bg-wy-500/10 border border-wy-500/30 rounded">
-            <img src={output} alt="Extracted frame" className="w-full h-12 object-cover rounded" />
+        {/* Running State */}
+        {isRunning && (
+          <div className="flex items-center gap-1.5 p-1.5 bg-wy-500/10 border border-wy-500/30 rounded">
+            <Loader2 className="w-3 h-3 animate-spin text-wy-500" />
+            <span className="text-[9px] text-wy-400">Extracting...</span>
+          </div>
+        )}
+
+        {/* Error Display */}
+        {error && (
+          <div className="p-1.5 bg-red-500/10 border border-red-500/30 rounded">
+            <div className="text-[9px] text-red-400 truncate">{error}</div>
+          </div>
+        )}
+
+        {/* Output Preview */}
+        {output && !isRunning && (
+          <div className="space-y-1">
+            <label className="text-[9px] text-wy-400 uppercase tracking-wide">Frame →</label>
+            <img src={output} alt="Extracted frame" className="w-full h-12 object-cover rounded border border-wy-500/30" />
           </div>
         )}
       </div>
