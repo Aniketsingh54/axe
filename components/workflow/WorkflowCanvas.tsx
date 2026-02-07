@@ -16,7 +16,7 @@ import {
 } from '@xyflow/react';
 import { useStore } from '@/hooks/useStore';
 import { nodeTypes } from './config';
-import { Play, Save, Loader2 } from 'lucide-react';
+import { Play, Save, Loader2, Download, Upload } from 'lucide-react';
 import { isValidConnection as validateConnection } from '@/lib/graph';
 
 import '@xyflow/react/dist/style.css';
@@ -42,6 +42,7 @@ export default function WorkflowCanvas() {
   const { screenToFlowPosition } = useReactFlow();
   const [isRunning, setIsRunning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Handle single node execution when pendingNodeRun is set
   useEffect(() => {
@@ -351,6 +352,72 @@ export default function WorkflowCanvas() {
     }
   };
 
+  // Export workflow as JSON
+  const handleExportWorkflow = () => {
+    const workflowData = {
+      version: 1,
+      name: workflowId ? `workflow-${workflowId}` : 'untitled-workflow',
+      exportedAt: new Date().toISOString(),
+      nodes: nodes.map(node => ({
+        id: node.id,
+        type: node.type,
+        position: node.position,
+        data: node.data,
+      })),
+      edges: edges.map(edge => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle,
+        targetHandle: edge.targetHandle,
+      })),
+    };
+
+    const blob = new Blob([JSON.stringify(workflowData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${workflowData.name}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Import workflow from JSON
+  const handleImportWorkflow = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const workflowData = JSON.parse(text);
+
+      if (!workflowData.nodes || !workflowData.edges) {
+        throw new Error('Invalid workflow file format');
+      }
+
+      // Load nodes and edges into store
+      const { setNodes, setEdges } = useStore.getState();
+      setNodes(workflowData.nodes);
+      setEdges(workflowData.edges);
+
+      // Clear workflow ID to force save as new
+      setWorkflowId(null);
+
+      // Auto-save the imported workflow
+      await handleSaveWorkflow();
+
+      addExecutionLog({ level: 'success', message: 'Workflow imported successfully!' });
+    } catch (error: any) {
+      console.error('Import error:', error);
+      alert(`Failed to import workflow: ${error.message}`);
+    }
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="relative h-full">
       {/* Action Buttons */}
@@ -375,6 +442,32 @@ export default function WorkflowCanvas() {
           {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
           {isRunning ? 'Running...' : 'Run Workflow'}
         </button>
+
+        {/* Export Button */}
+        <button
+          onClick={handleExportWorkflow}
+          disabled={nodes.length === 0}
+          className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors bg-dark-bg border border-dark-border text-dark-text hover:bg-dark-border disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Export as JSON"
+        >
+          <Download className="w-4 h-4" />
+        </button>
+
+        {/* Import Button */}
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors bg-dark-bg border border-dark-border text-dark-text hover:bg-dark-border"
+          title="Import from JSON"
+        >
+          <Upload className="w-4 h-4" />
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          onChange={handleImportWorkflow}
+          className="hidden"
+        />
       </div>
 
       <ReactFlow
