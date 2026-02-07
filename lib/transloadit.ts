@@ -129,9 +129,8 @@ export async function uploadFile(
     onProgress?: (percent: number) => void
 ): Promise<string> {
     const authKey = process.env.NEXT_PUBLIC_TRANSLOADIT_AUTH_KEY;
-    const isPlaceholder = authKey === "c767882fc1143c30a6480eda2e2a6921";
 
-    if (authKey && !isPlaceholder) {
+    if (authKey) {
         try {
             return await uploadToTransloadit({ file, onProgress });
         } catch (error) {
@@ -139,7 +138,7 @@ export async function uploadFile(
         }
     }
 
-    // Fallback to data URL
+    // Fallback to data URL (only if no auth key or upload fails)
     if (onProgress) onProgress(30);
     const dataUrl = await fileToDataUrl(file);
     if (onProgress) onProgress(100);
