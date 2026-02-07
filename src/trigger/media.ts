@@ -73,10 +73,9 @@ async function getVideoDuration(inputPath: string): Promise<number> {
 // Helper to upload to Transloadit (simplified - in production use proper SDK)
 async function uploadToTransloadit(filePath: string): Promise<string> {
     const authKey = process.env.NEXT_PUBLIC_TRANSLOADIT_AUTH_KEY;
-    const isPlaceholder = authKey === "c767882fc1143c30a6480eda2e2a6921";
 
-    if (!authKey || isPlaceholder) {
-        console.log("Transloadit AUTH KEY not configured or placeholder, using base64 fallback");
+    if (!authKey) {
+        console.log("Transloadit AUTH KEY not configured, using base64 fallback");
         const buffer = fs.readFileSync(filePath);
         return `data:image/jpeg;base64,${buffer.toString('base64')}`;
     }
@@ -164,6 +163,11 @@ export const mediaProcessTask = task({
     maxDuration: 180, // 3 minutes max for media processing
     run: async (payload: MediaPayload): Promise<MediaOutput> => {
         const { operation, inputUrl, params } = payload;
+
+        // Validate URL early
+        if (!inputUrl || inputUrl === '[base64-stripped]' || (!inputUrl.startsWith('http://') && !inputUrl.startsWith('https://'))) {
+            throw new Error(`Invalid URL: "${inputUrl}". Media processing requires a valid HTTP/HTTPS URL. Please re-upload your media files.`);
+        }
 
         // Create temp directory for processing
         const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "media-"));
