@@ -47,20 +47,13 @@ const UploadVideoNode = memo(({ id, data, selected }: NodeProps<UploadVideoNodeT
     setUploadProgress(0);
 
     try {
-      // For videos, create object URL (more efficient than data URL for large files)
-      const objectUrl = URL.createObjectURL(file);
-
-      // Simulate progress for smooth UX
-      const progressInterval = setInterval(() => {
-        setUploadProgress((prev) => Math.min(prev + 10, 90));
-      }, 100);
-
-      // Short delay to show progress
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      clearInterval(progressInterval);
+      const { uploadFile } = await import('@/lib/transloadit');
+      const url = await uploadFile(file, (progress) => {
+        setUploadProgress(progress);
+      });
 
       updateNodeData(id, {
-        videoUrl: objectUrl,
+        videoUrl: url,
         fileName: file.name,
         isUploading: false
       });
@@ -68,7 +61,7 @@ const UploadVideoNode = memo(({ id, data, selected }: NodeProps<UploadVideoNodeT
     } catch (error) {
       console.error('Upload error:', error);
       updateNodeData(id, { isUploading: false });
-      alert('Upload failed');
+      alert('Upload failed. Check Transloadit configuration.');
     }
   }, [id, updateNodeData]);
 

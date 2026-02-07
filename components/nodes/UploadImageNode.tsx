@@ -47,31 +47,21 @@ const UploadImageNode = memo(({ id, data, selected }: NodeProps<UploadImageNodeT
     setUploadProgress(0);
 
     try {
-      // Use data URL for MVP (fast and works without server)
-      const reader = new FileReader();
-      reader.onprogress = (e) => {
-        if (e.lengthComputable) {
-          setUploadProgress((e.loaded / e.total) * 100);
-        }
-      };
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        updateNodeData(id, {
-          imageUrl: dataUrl,
-          fileName: file.name,
-          isUploading: false
-        });
-        setUploadProgress(100);
-      };
-      reader.onerror = () => {
-        updateNodeData(id, { isUploading: false });
-        alert('Failed to read file');
-      };
-      reader.readAsDataURL(file);
+      const { uploadFile } = await import('@/lib/transloadit');
+      const url = await uploadFile(file, (progress) => {
+        setUploadProgress(progress);
+      });
+
+      updateNodeData(id, {
+        imageUrl: url,
+        fileName: file.name,
+        isUploading: false
+      });
+      setUploadProgress(100);
     } catch (error) {
       console.error('Upload error:', error);
       updateNodeData(id, { isUploading: false });
-      alert('Upload failed');
+      alert('Upload failed. Check Transloadit configuration.');
     }
   }, [id, updateNodeData]);
 

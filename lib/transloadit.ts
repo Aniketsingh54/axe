@@ -129,15 +129,19 @@ export async function uploadFile(
     onProgress?: (percent: number) => void
 ): Promise<string> {
     const authKey = process.env.NEXT_PUBLIC_TRANSLOADIT_AUTH_KEY;
+    const isPlaceholder = authKey === "c767882fc1143c30a6480eda2e2a6921";
 
-    if (authKey) {
-        // Use Transloadit
-        return uploadToTransloadit({ file, onProgress });
-    } else {
-        // Fallback to data URL
-        if (onProgress) onProgress(50);
-        const dataUrl = await fileToDataUrl(file);
-        if (onProgress) onProgress(100);
-        return dataUrl;
+    if (authKey && !isPlaceholder) {
+        try {
+            return await uploadToTransloadit({ file, onProgress });
+        } catch (error) {
+            console.error("Transloadit upload failed, falling back to Data URL:", error);
+        }
     }
+
+    // Fallback to data URL
+    if (onProgress) onProgress(30);
+    const dataUrl = await fileToDataUrl(file);
+    if (onProgress) onProgress(100);
+    return dataUrl;
 }

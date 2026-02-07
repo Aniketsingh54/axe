@@ -10,6 +10,8 @@ import {
   Film
 } from 'lucide-react';
 
+import WorkflowList from './WorkflowList';
+
 interface DraggableNodeButtonProps {
   icon: React.ReactNode;
   label: string;
@@ -83,6 +85,10 @@ export default function NodePalette() {
           nodeType="extract-frame"
         />
       </div>
+
+      <div className="my-6 border-t border-dark-border" />
+
+      <WorkflowList />
     </div>
   );
 }

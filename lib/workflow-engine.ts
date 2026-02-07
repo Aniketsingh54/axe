@@ -53,11 +53,19 @@ export class WorkflowEngine {
         for (const edge of incomingEdges) {
             const sourceRun = this.context.nodeRuns.get(edge.source);
             if (sourceRun && sourceRun.status === 'SUCCESS' && sourceRun.outputs) {
-                // Map the output to the input handle id
-                // Default to 'output' if no handle specified
                 const handleId = edge.targetHandle || 'input';
-                // In most cases, output is in 'output' property
-                inputs[handleId] = sourceRun.outputs.output;
+                const outputValue = sourceRun.outputs.output;
+
+                // Handle input aggregation for multiple incoming edges to the same handle
+                if (inputs[handleId] !== undefined) {
+                    if (Array.isArray(inputs[handleId])) {
+                        (inputs[handleId] as any[]).push(outputValue);
+                    } else {
+                        inputs[handleId] = [inputs[handleId], outputValue];
+                    }
+                } else {
+                    inputs[handleId] = outputValue;
+                }
             }
         }
         return inputs;
@@ -206,10 +214,13 @@ export class WorkflowEngine {
                     break; // All done
                 }
 
-                // Run them
-                for (const node of runnableNodes) {
+                // Run them in parallel
+                await Promise.all(runnableNodes.map(async (node) => {
                     await this.executeNode(node.id);
                     visited.add(node.id);
+                }));
+
+                if (runnableNodes.length > 0) {
                     hasRunningNodes = true;
                 }
             }

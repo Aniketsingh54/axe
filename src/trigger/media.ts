@@ -64,28 +64,99 @@ async function getVideoDuration(inputPath: string): Promise<number> {
             `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${inputPath}"`
         );
         return parseFloat(stdout.trim());
-    } catch {
+    } catch (error) {
+        console.warn("Failed to get video duration:", error);
         return 0;
     }
 }
 
 // Helper to upload to Transloadit (simplified - in production use proper SDK)
 async function uploadToTransloadit(filePath: string): Promise<string> {
-    // For MVP, we'll store files locally and return a local path
-    // In production, you'd upload to Transloadit/S3 and get a public URL
-
     const authKey = process.env.NEXT_PUBLIC_TRANSLOADIT_AUTH_KEY;
-    const authSecret = process.env.TRANSLOADIT_AUTH_SECRET;
+    const isPlaceholder = authKey === "c767882fc1143c30a6480eda2e2a6921";
 
-    if (!authKey || !authSecret) {
-        // Return local file path if Transloadit not configured
-        console.log("Transloadit not configured, using local path");
-        return `file://${filePath}`;
+    if (!authKey || isPlaceholder) {
+        console.log("Transloadit AUTH KEY not configured or placeholder, using base64 fallback");
+        const buffer = fs.readFileSync(filePath);
+        return `data:image/jpeg;base64,${buffer.toString('base64')}`;
     }
 
-    // TODO: Implement actual Transloadit upload
-    // For now, return the local path
-    return `file://${filePath}`;
+    try {
+        console.log(`Uploading ${filePath} to Transloadit...`);
+        const fileBuffer = fs.readFileSync(filePath);
+        const fileName = path.basename(filePath);
+
+        // Create FormData
+        const formData = new FormData();
+        const blob = new Blob([fileBuffer]);
+        formData.append("file", blob, fileName);
+
+        // Params
+        const params = {
+            auth: { key: authKey },
+            steps: {
+                ":original": { robot: "/upload/handle" },
+                optimized: { robot: "/image/optimize", use: ":original", progressive: true }
+            }
+        };
+
+        formData.append("params", JSON.stringify(params));
+
+        const response = await fetch("https://api2.transloadit.com/assemblies", {
+            method: "POST",
+            body: formData,
+        });
+
+        if (!response.ok) {
+            throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+        }
+
+        const result: any = await response.json();
+
+        if (result.error) {
+            throw new Error(result.error);
+        }
+
+        console.log(`Assembly created: ${result.assembly_id}, polling for completion...`);
+
+        // Poll for completion with exponential backoff
+        const assemblyUrl = result.assembly_url;
+
+        let attempts = 0;
+        let delay = 500; // Start at 500ms
+        const maxDelay = 3000; // Max 3 seconds between polls
+        const maxAttempts = 30; // ~30 seconds total max
+
+        while (attempts < maxAttempts) {
+            const statusRes = await fetch(assemblyUrl);
+            const status: any = await statusRes.json();
+
+            if (status.ok === "ASSEMBLY_COMPLETED") {
+                const results = status.results.optimized || status.results[":original"];
+                if (results && results.length > 0) {
+                    const url = results[0].ssl_url || results[0].url;
+                    console.log(`Upload complete after ${attempts + 1} attempts: ${url}`);
+                    return url;
+                }
+            }
+
+            if (status.error) {
+                throw new Error(status.error);
+            }
+
+            console.log(`Polling attempt ${attempts + 1}/${maxAttempts}, waiting ${delay}ms...`);
+            await new Promise(r => setTimeout(r, delay));
+            delay = Math.min(delay * 1.5, maxDelay); // Exponential backoff
+            attempts++;
+        }
+
+        throw new Error("Transloadit upload timed out after 30 attempts");
+
+    } catch (error) {
+        console.error("Transloadit upload error, falling back to base64:", error);
+        const buffer = fs.readFileSync(filePath);
+        return `data:image/jpeg;base64,${buffer.toString('base64')}`;
+    }
 }
 
 export const mediaProcessTask = task({

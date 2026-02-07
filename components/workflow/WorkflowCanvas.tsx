@@ -16,7 +16,9 @@ import {
 } from '@xyflow/react';
 import { useStore } from '@/hooks/useStore';
 import { nodeTypes } from './config';
-import { Play, Square, Save, Loader2 } from 'lucide-react';
+import { Play, Square, Save, Loader2, Terminal } from 'lucide-react';
+import { isValidConnection as validateConnection } from '@/lib/graph';
+import ExecutionLogsPanel from '@/components/sidebar/ExecutionLogsPanel';
 
 import '@xyflow/react/dist/style.css';
 
@@ -31,17 +33,26 @@ export default function WorkflowCanvas() {
     updateNodeData,
     workflowId,
     setWorkflowId,
-    refreshHistory
+    refreshHistory,
+    addExecutionLog,
+    clearExecutionLogs,
+    setIsRunning: setGlobalIsRunning,
   } = useStore();
   const { screenToFlowPosition } = useReactFlow();
   const [isRunning, setIsRunning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
 
   const onConnect = useCallback(
     (connection: Connection) => {
       setEdges((prevEdges) => addEdge(connection, prevEdges));
     },
     [setEdges]
+  );
+
+  const isValidConnection = useCallback(
+    (connection: Connection) => validateConnection(connection, edges),
+    [edges]
   );
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -160,6 +171,11 @@ export default function WorkflowCanvas() {
     await handleSaveWorkflow();
 
     setIsRunning(true);
+    setGlobalIsRunning(true);
+    setShowLogs(true); // Auto-open logs panel
+    clearExecutionLogs(); // Clear previous logs
+
+    addExecutionLog({ level: 'info', message: `Starting workflow execution with ${nodes.length} nodes...` });
 
     // Set all to running visual state (optional, or engine handles it)
     nodes.forEach(node => {
@@ -167,6 +183,8 @@ export default function WorkflowCanvas() {
     });
 
     try {
+      addExecutionLog({ level: 'info', message: 'Sending workflow to execution engine...' });
+
       const response = await fetch('/api/run-workflow', {
         method: 'POST',
         headers: {
@@ -188,9 +206,28 @@ export default function WorkflowCanvas() {
       console.log('Workflow execution result:', result);
       refreshHistory(); // Refresh history panel
 
-      // Update nodes with results
+      // Update nodes with results and log each
       if (result.results) {
         result.results.forEach((nodeResult: any) => {
+          const nodeInfo = nodes.find(n => n.id === nodeResult.nodeId);
+          const nodeName = nodeInfo?.type || nodeResult.nodeId;
+
+          if (nodeResult.status === 'SUCCESS') {
+            addExecutionLog({
+              level: 'success',
+              nodeId: nodeResult.nodeId,
+              nodeName,
+              message: `Completed successfully`,
+            });
+          } else if (nodeResult.status === 'FAILED') {
+            addExecutionLog({
+              level: 'error',
+              nodeId: nodeResult.nodeId,
+              nodeName,
+              message: `Failed: ${nodeResult.error || 'Unknown error'}`,
+            });
+          }
+
           updateNodeData(nodeResult.nodeId, {
             isRunning: false,
             output: nodeResult.outputs?.output,
@@ -199,8 +236,16 @@ export default function WorkflowCanvas() {
         });
       }
 
+      // Log overall result
+      if (result.status === 'SUCCESS') {
+        addExecutionLog({ level: 'success', message: `Workflow completed successfully!` });
+      } else {
+        addExecutionLog({ level: 'warn', message: `Workflow finished with status: ${result.status}` });
+      }
+
     } catch (error: any) {
       console.error('Error running workflow:', error);
+      addExecutionLog({ level: 'error', message: `Execution failed: ${error.message}` });
       alert(`Execution failed: ${error.message}`);
       // Reset running state
       nodes.forEach(node => {
@@ -208,6 +253,7 @@ export default function WorkflowCanvas() {
       });
     } finally {
       setIsRunning(false);
+      setGlobalIsRunning(false);
     }
   };
 
@@ -235,6 +281,17 @@ export default function WorkflowCanvas() {
           {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
           {isRunning ? 'Running...' : 'Run Workflow'}
         </button>
+
+        <button
+          onClick={() => setShowLogs(!showLogs)}
+          className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${showLogs
+              ? 'bg-wy-500/20 border border-wy-500/50 text-wy-400'
+              : 'bg-dark-bg border border-dark-border text-dark-text hover:bg-dark-border'
+            }`}
+          title="Toggle execution logs"
+        >
+          <Terminal className="w-4 h-4" />
+        </button>
       </div>
 
       <ReactFlow
@@ -245,6 +302,7 @@ export default function WorkflowCanvas() {
         onConnect={onConnect}
         onDrop={onDrop}
         onDragOver={onDragOver}
+        isValidConnection={isValidConnection}
         nodeTypes={nodeTypes as NodeTypes}
         fitView
         minZoom={0.1}
@@ -263,6 +321,9 @@ export default function WorkflowCanvas() {
           className="bg-dark-surface border-dark-border"
         />
       </ReactFlow>
+
+      {/* Execution Logs Panel */}
+      <ExecutionLogsPanel isOpen={showLogs} onClose={() => setShowLogs(false)} />
     </div>
   );
 }
