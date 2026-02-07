@@ -14,9 +14,12 @@ export const triggerClient = {
     const run = await tasks.triggerAndPoll(taskId, payload);
 
     if (run.status === "COMPLETED") {
+      console.log(`[triggerAndWait] Task ${taskId} completed. Output:`, JSON.stringify(run.output, null, 2));
       return run.output;
     } else {
-      throw new Error(`Task ${taskId} failed with status: ${run.status}`);
+      console.error(`[triggerAndWait] Task ${taskId} failed:`, JSON.stringify(run, null, 2));
+      const errorMsg = (run as any).error?.message || JSON.stringify((run as any).error);
+      throw new Error(`Task ${taskId} failed: ${errorMsg || run.status}`);
     }
   }
 };

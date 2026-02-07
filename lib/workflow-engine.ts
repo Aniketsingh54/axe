@@ -86,23 +86,24 @@ export class WorkflowEngine {
             console.log(`Executing node ${nodeId} (${node.type}) with inputs:`, inputs);
 
             // Execution Logic based on Node Type
+            // Execution Logic based on Node Type
             switch (node.type) {
-                case 'textNode':
+                case 'text':
                     // Text Node is pass-through
                     outputs = { output: inputs.text || '' };
                     break;
 
-                case 'uploadImageNode':
+                case 'upload-image':
                     // Upload Image is pass-through (url in data)
                     outputs = { output: inputs.imageUrl || '' };
                     break;
 
-                case 'uploadVideoNode':
+                case 'upload-video':
                     // Upload Video is pass-through
                     outputs = { output: inputs.videoUrl || '' };
                     break;
 
-                case 'llmNode':
+                case 'llm':
                     // Run LLM Task
                     const llmResult: any = await triggerClient.triggerAndWait('gemini-generate', {
                         systemPrompt: inputs.system_prompt || inputs.systemPrompt,
@@ -113,7 +114,7 @@ export class WorkflowEngine {
                     outputs = { output: (llmResult as any).text || llmResult };
                     break;
 
-                case 'cropImageNode':
+                case 'crop-image':
                     // Run Crop Task
                     const cropResult: any = await triggerClient.triggerAndWait('media-process', {
                         operation: 'CROP',
@@ -128,7 +129,7 @@ export class WorkflowEngine {
                     outputs = { output: (cropResult as any).url || cropResult };
                     break;
 
-                case 'extractFrameNode':
+                case 'extract-frame':
                     // Run Extract Frame Task
                     const extractResult: any = await triggerClient.triggerAndWait('media-process', {
                         operation: 'EXTRACT_FRAME',

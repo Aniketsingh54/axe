@@ -30,7 +30,8 @@ export default function WorkflowCanvas() {
     setEdges,
     updateNodeData,
     workflowId,
-    setWorkflowId
+    setWorkflowId,
+    refreshHistory
   } = useStore();
   const { screenToFlowPosition } = useReactFlow();
   const [isRunning, setIsRunning] = useState(false);
@@ -185,6 +186,7 @@ export default function WorkflowCanvas() {
 
       const result = await response.json();
       console.log('Workflow execution result:', result);
+      refreshHistory(); // Refresh history panel
 
       // Update nodes with results
       if (result.results) {

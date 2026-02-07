@@ -13,24 +13,29 @@ export async function POST(req: Request) {
         const { id, name, nodes, edges } = body;
 
         // Use upsert to create or update
-        const workflow = await prisma.workflow.upsert({
-            where: {
-                id: id || 'new', // Use 'new' as a placeholder if no ID provided, though client should gen UUID
-            },
-            update: {
-                name,
-                nodes,
-                edges,
-                updatedAt: new Date(),
-            },
-            create: {
-                id: id,
-                userId,
-                name: name || 'Untitled Workflow',
-                nodes,
-                edges,
-            },
-        });
+        let workflow;
+
+        if (id) {
+            // Update existing workflow
+            workflow = await prisma.workflow.update({
+                where: { id },
+                data: {
+                    name,
+                    nodes,
+                    edges,
+                },
+            });
+        } else {
+            // Create new workflow
+            workflow = await prisma.workflow.create({
+                data: {
+                    userId,
+                    name: name || 'Untitled Workflow',
+                    nodes,
+                    edges,
+                },
+            });
+        }
 
         return NextResponse.json(workflow);
     } catch (error) {

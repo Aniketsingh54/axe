@@ -26,32 +26,27 @@ interface Run {
 }
 
 export default function HistoryPanel() {
-  const { workflowId } = useStore();
+  const { workflowId, historyTrigger } = useStore();
   const [runs, setRuns] = useState<Run[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
 
-  const fetchRuns = async () => {
+  const fetchHistory = async () => {
     if (!workflowId) return;
-
     try {
-      const response = await fetch(`/api/workflows/${workflowId}/runs`);
-      if (response.ok) {
-        const data = await response.json();
+      const res = await fetch(`/api/workflows/${workflowId}/runs`);
+      if (res.ok) {
+        const data = await res.json();
         setRuns(data);
       }
     } catch (error) {
-      console.error('Failed to fetch runs:', error);
+      console.error('Failed to fetch history:', error);
     }
   };
 
   useEffect(() => {
-    fetchRuns();
-
-    // Poll for updates every 5 seconds
-    const interval = setInterval(fetchRuns, 5000);
-    return () => clearInterval(interval);
-  }, [workflowId]);
+    fetchHistory();
+  }, [workflowId, historyTrigger]);
 
   const toggleExpand = (runId: string) => {
     setExpandedRunId(expandedRunId === runId ? null : runId);
@@ -98,7 +93,7 @@ export default function HistoryPanel() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-dark-text uppercase tracking-wide">Runs History</h2>
         <button
-          onClick={fetchRuns}
+          onClick={fetchHistory}
           className="p-1.5 rounded-md hover:bg-dark-border transition-colors text-dark-text-muted hover:text-dark-text"
           title="Refresh"
         >

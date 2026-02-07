@@ -1,0 +1,64 @@
+{
+  "configPath": "/home/aniket/axe/.trigger/tmp/build-67eYwg/axe/trigger.config.mjs",
+  "tasks": [
+    {
+      "id": "gemini-generate",
+      "retry": {
+        "maxAttempts": 3,
+        "factor": 2,
+        "minTimeoutInMs": 1000,
+        "maxTimeoutInMs": 10000,
+        "randomize": true
+      },
+      "maxDuration": 120,
+      "filePath": "src/trigger/llm.ts",
+      "exportName": "geminiGenerateTask",
+      "entryPoint": "/home/aniket/axe/.trigger/tmp/build-67eYwg/axe/src/trigger/llm.mjs"
+    },
+    {
+      "id": "media-process",
+      "retry": {
+        "maxAttempts": 3,
+        "factor": 2,
+        "minTimeoutInMs": 1000,
+        "maxTimeoutInMs": 10000,
+        "randomize": true
+      },
+      "maxDuration": 180,
+      "filePath": "src/trigger/media.ts",
+      "exportName": "mediaProcessTask",
+      "entryPoint": "/home/aniket/axe/.trigger/tmp/build-67eYwg/axe/src/trigger/media.mjs"
+    },
+    {
+      "id": "crop-image",
+      "retry": {
+        "maxAttempts": 3,
+        "factor": 2,
+        "minTimeoutInMs": 1000,
+        "maxTimeoutInMs": 10000,
+        "randomize": true
+      },
+      "maxDuration": 120,
+      "filePath": "src/trigger/media.ts",
+      "exportName": "cropImageTask",
+      "entryPoint": "/home/aniket/axe/.trigger/tmp/build-67eYwg/axe/src/trigger/media.mjs"
+    },
+    {
+      "id": "extract-frame",
+      "retry": {
+        "maxAttempts": 3,
+        "factor": 2,
+        "minTimeoutInMs": 1000,
+        "maxTimeoutInMs": 10000,
+        "randomize": true
+      },
+      "maxDuration": 120,
+      "filePath": "src/trigger/media.ts",
+      "exportName": "extractFrameTask",
+      "entryPoint": "/home/aniket/axe/.trigger/tmp/build-67eYwg/axe/src/trigger/media.mjs"
+    }
+  ],
+  "workerEntryPoint": "/home/aniket/axe/.trigger/tmp/build-67eYwg/.npm/_npx/b408398ddf001950/node_modules/trigger.dev/dist/esm/entryPoints/dev-run-worker.mjs",
+  "runtime": "node",
+  "customConditions": []
+}

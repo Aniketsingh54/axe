@@ -21,12 +21,17 @@ type AppState = {
   setEdges: (edges: SetEdgesFunc) => void;
   workflowId: string | null;
   setWorkflowId: (id: string | null) => void;
+  // History refresh trigger
+  historyTrigger: number;
+  refreshHistory: () => void;
 };
 
 export const useStore = create<AppState>((set, get) => ({
   nodes: [],
   edges: [],
   workflowId: null,
+  historyTrigger: 0,
+  refreshHistory: () => set((state) => ({ historyTrigger: state.historyTrigger + 1 })),
   onNodesChange: (changes) => {
     set({
       nodes: applyNodeChanges(changes, get().nodes),

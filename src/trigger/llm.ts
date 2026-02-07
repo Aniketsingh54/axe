@@ -49,8 +49,16 @@ export const geminiGenerateTask = task({
         const genAI = new GoogleGenerativeAI(apiKey);
 
         // Select the model
+        // Select the model
+        // Map alias to specific version if needed
+        let modelName = payload.model || "gemini-1.5-flash";
+        // User requested 2.5-flash
+        if (modelName.includes("gemini-1.5-flash")) {
+            modelName = "gemini-2.5-flash" as any;
+        }
+
         const model: GenerativeModel = genAI.getGenerativeModel({
-            model: payload.model || "gemini-1.5-flash",
+            model: modelName as any,
             systemInstruction: payload.systemPrompt,
         });
 
