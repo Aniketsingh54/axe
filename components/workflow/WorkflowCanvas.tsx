@@ -13,10 +13,11 @@ import {
   addEdge,
   Connection,
   useReactFlow,
+  OnSelectionChangeFunc,
 } from '@xyflow/react';
 import { useStore } from '@/hooks/useStore';
 import { nodeTypes } from './config';
-import { Play, Save, Loader2, Download, Upload } from 'lucide-react';
+import { Play, Save, Loader2, Download, Upload, Undo2, Redo2, FilePlus, PlayCircle } from 'lucide-react';
 import { isValidConnection as validateConnection } from '@/lib/graph';
 
 import '@xyflow/react/dist/style.css';
@@ -38,11 +39,22 @@ export default function WorkflowCanvas() {
     setIsRunning: setGlobalIsRunning,
     pendingNodeRun,
     setPendingNodeRun,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    clearWorkflow,
   } = useStore();
   const { screenToFlowPosition } = useReactFlow();
   const [isRunning, setIsRunning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Track selected nodes
+  const onSelectionChange: OnSelectionChangeFunc = useCallback(({ nodes: selectedNodes }) => {
+    setSelectedNodeIds(selectedNodes.map(n => n.id));
+  }, []);
 
   // Handle single node execution when pendingNodeRun is set
   useEffect(() => {
@@ -51,6 +63,23 @@ export default function WorkflowCanvas() {
       setPendingNodeRun(null);
     }
   }, [pendingNodeRun]);
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        if (e.shiftKey) {
+          e.preventDefault();
+          redo();
+        } else {
+          e.preventDefault();
+          undo();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]);
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -164,7 +193,6 @@ export default function WorkflowCanvas() {
 
       const savedWorkflow = await response.json();
       setWorkflowId(savedWorkflow.id);
-      // alert('Workflow saved!');
     } catch (error) {
       console.error('Save failed:', error);
       alert('Failed to save workflow');
@@ -177,7 +205,6 @@ export default function WorkflowCanvas() {
   const handleRunSingleNode = async (targetNodeId: string) => {
     if (isRunning) return;
 
-    // Auto-save before running
     await handleSaveWorkflow();
 
     setIsRunning(true);
@@ -188,8 +215,6 @@ export default function WorkflowCanvas() {
     const nodeName = targetNode?.type || 'Node';
 
     addExecutionLog({ level: 'info', message: `Running single node: ${nodeName} (with dependencies)...` });
-
-    // Set target node to running state
     updateNodeData(targetNodeId, { isRunning: true, error: undefined, output: undefined });
 
     try {
@@ -200,7 +225,7 @@ export default function WorkflowCanvas() {
           workflowId,
           nodes,
           edges,
-          targetNodeId, // This triggers single node execution
+          targetNodeId,
         }),
       });
 
@@ -213,7 +238,6 @@ export default function WorkflowCanvas() {
       console.log('Single node execution result:', result);
       refreshHistory();
 
-      // Update nodes with results
       if (result.results) {
         result.results.forEach((nodeResult: any) => {
           const nodeInfo = nodes.find(n => n.id === nodeResult.nodeId);
@@ -259,36 +283,31 @@ export default function WorkflowCanvas() {
     }
   };
 
-  const handleRunWorkflow = async () => {
+  // Run multiple selected nodes
+  const handleRunSelectedNodes = async () => {
+    if (isRunning || selectedNodeIds.length === 0) return;
 
-    if (isRunning) return;
-
-    // Auto-save before running
     await handleSaveWorkflow();
 
     setIsRunning(true);
     setGlobalIsRunning(true);
-    clearExecutionLogs(); // Clear previous logs
+    clearExecutionLogs();
 
-    addExecutionLog({ level: 'info', message: `Starting workflow execution with ${nodes.length} nodes...` });
+    addExecutionLog({ level: 'info', message: `Running ${selectedNodeIds.length} selected node(s) with dependencies...` });
 
-    // Set all to running visual state (optional, or engine handles it)
-    nodes.forEach(node => {
-      updateNodeData(node.id, { isRunning: true, error: undefined, output: undefined });
+    selectedNodeIds.forEach(nodeId => {
+      updateNodeData(nodeId, { isRunning: true, error: undefined, output: undefined });
     });
 
     try {
-      addExecutionLog({ level: 'info', message: 'Sending workflow to execution engine...' });
-
       const response = await fetch('/api/run-workflow', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          workflowId, // Pass the ID we just saved (or null if save failed, but handled above)
+          workflowId,
           nodes,
-          edges
+          edges,
+          targetNodeIds: selectedNodeIds,
         }),
       });
 
@@ -298,10 +317,89 @@ export default function WorkflowCanvas() {
       }
 
       const result = await response.json();
-      console.log('Workflow execution result:', result);
-      refreshHistory(); // Refresh history panel
+      console.log('Selected nodes execution result:', result);
+      refreshHistory();
 
-      // Update nodes with results and log each
+      if (result.results) {
+        result.results.forEach((nodeResult: any) => {
+          const nodeInfo = nodes.find(n => n.id === nodeResult.nodeId);
+          const name = nodeInfo?.type || nodeResult.nodeId;
+
+          if (nodeResult.status === 'SUCCESS') {
+            addExecutionLog({
+              level: 'success',
+              nodeId: nodeResult.nodeId,
+              nodeName: name,
+              message: `Completed successfully`,
+            });
+          } else if (nodeResult.status === 'FAILED') {
+            addExecutionLog({
+              level: 'error',
+              nodeId: nodeResult.nodeId,
+              nodeName: name,
+              message: `Failed: ${nodeResult.error || 'Unknown error'}`,
+            });
+          }
+
+          updateNodeData(nodeResult.nodeId, {
+            isRunning: false,
+            output: nodeResult.outputs?.output,
+            error: nodeResult.error,
+          });
+        });
+      }
+
+      if (result.status === 'SUCCESS') {
+        addExecutionLog({ level: 'success', message: `Selected nodes execution completed!` });
+      } else {
+        addExecutionLog({ level: 'warn', message: `Execution finished with status: ${result.status}` });
+      }
+
+    } catch (error: any) {
+      console.error('Error running selected nodes:', error);
+      addExecutionLog({ level: 'error', message: `Execution failed: ${error.message}` });
+      selectedNodeIds.forEach(nodeId => {
+        updateNodeData(nodeId, { isRunning: false, error: error.message });
+      });
+    } finally {
+      setIsRunning(false);
+      setGlobalIsRunning(false);
+    }
+  };
+
+  const handleRunWorkflow = async () => {
+    if (isRunning) return;
+
+    await handleSaveWorkflow();
+
+    setIsRunning(true);
+    setGlobalIsRunning(true);
+    clearExecutionLogs();
+
+    addExecutionLog({ level: 'info', message: `Starting workflow execution with ${nodes.length} nodes...` });
+
+    nodes.forEach(node => {
+      updateNodeData(node.id, { isRunning: true, error: undefined, output: undefined });
+    });
+
+    try {
+      addExecutionLog({ level: 'info', message: 'Sending workflow to execution engine...' });
+
+      const response = await fetch('/api/run-workflow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workflowId, nodes, edges }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Workflow execution result:', result);
+      refreshHistory();
+
       if (result.results) {
         result.results.forEach((nodeResult: any) => {
           const nodeInfo = nodes.find(n => n.id === nodeResult.nodeId);
@@ -331,7 +429,6 @@ export default function WorkflowCanvas() {
         });
       }
 
-      // Log overall result
       if (result.status === 'SUCCESS') {
         addExecutionLog({ level: 'success', message: `Workflow completed successfully!` });
       } else {
@@ -342,7 +439,6 @@ export default function WorkflowCanvas() {
       console.error('Error running workflow:', error);
       addExecutionLog({ level: 'error', message: `Execution failed: ${error.message}` });
       alert(`Execution failed: ${error.message}`);
-      // Reset running state
       nodes.forEach(node => {
         updateNodeData(node.id, { isRunning: false });
       });
@@ -395,15 +491,10 @@ export default function WorkflowCanvas() {
         throw new Error('Invalid workflow file format');
       }
 
-      // Load nodes and edges into store
       const { setNodes, setEdges } = useStore.getState();
       setNodes(workflowData.nodes);
       setEdges(workflowData.edges);
-
-      // Clear workflow ID to force save as new
       setWorkflowId(null);
-
-      // Auto-save the imported workflow
       await handleSaveWorkflow();
 
       addExecutionLog({ level: 'success', message: 'Workflow imported successfully!' });
@@ -412,7 +503,6 @@ export default function WorkflowCanvas() {
       alert(`Failed to import workflow: ${error.message}`);
     }
 
-    // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -420,8 +510,35 @@ export default function WorkflowCanvas() {
 
   return (
     <div className="relative h-full">
-      {/* Action Buttons */}
+      {/* Action Buttons - Top Right */}
       <div className="absolute top-4 right-4 z-10 flex gap-2">
+        {/* Undo/Redo */}
+        <button
+          onClick={undo}
+          disabled={!canUndo()}
+          className="flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium transition-colors bg-dark-bg border border-dark-border text-dark-text hover:bg-dark-border disabled:opacity-30 disabled:cursor-not-allowed"
+          title="Undo (Ctrl+Z)"
+        >
+          <Undo2 className="w-4 h-4" />
+        </button>
+        <button
+          onClick={redo}
+          disabled={!canRedo()}
+          className="flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium transition-colors bg-dark-bg border border-dark-border text-dark-text hover:bg-dark-border disabled:opacity-30 disabled:cursor-not-allowed"
+          title="Redo (Ctrl+Shift+Z)"
+        >
+          <Redo2 className="w-4 h-4" />
+        </button>
+
+        {/* New Workflow */}
+        <button
+          onClick={clearWorkflow}
+          className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors bg-dark-bg border border-dark-border text-dark-text hover:bg-dark-border"
+          title="New Workflow"
+        >
+          <FilePlus className="w-4 h-4" />
+        </button>
+
         <button
           onClick={handleSaveWorkflow}
           disabled={isSaving}
@@ -442,6 +559,22 @@ export default function WorkflowCanvas() {
           {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
           {isRunning ? 'Running...' : 'Run Workflow'}
         </button>
+
+        {/* Run Selected Button */}
+        {selectedNodeIds.length > 0 && (
+          <button
+            onClick={handleRunSelectedNodes}
+            disabled={isRunning}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${isRunning
+              ? 'bg-green-500/50 text-white/50 cursor-not-allowed'
+              : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
+            title={`Run ${selectedNodeIds.length} selected node(s) with dependencies`}
+          >
+            {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
+            Run Selected ({selectedNodeIds.length})
+          </button>
+        )}
 
         {/* Export Button */}
         <button
@@ -478,6 +611,7 @@ export default function WorkflowCanvas() {
         onConnect={onConnect}
         onDrop={onDrop}
         onDragOver={onDragOver}
+        onSelectionChange={onSelectionChange}
         isValidConnection={isValidConnection}
         nodeTypes={nodeTypes as NodeTypes}
         fitView

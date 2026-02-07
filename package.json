@@ -1,7 +1,7 @@
 {
-  "name": "weavy-clone",
+  "name": "axe",
   "version": "1.0.0",
-  "description": "A Weavy.ai workflow clone with Next.js, React Flow, and Trigger.dev",
+  "description": "Axe - AI Workflow Builder with Next.js, React Flow, and Trigger.dev",
   "main": "index.js",
   "scripts": {
     "dev": "next dev",

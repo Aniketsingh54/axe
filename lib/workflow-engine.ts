@@ -385,4 +385,88 @@ export class WorkflowEngine {
             throw error;
         }
     }
+
+    // Run multiple selected nodes with their dependencies
+    public async runNodes(targetNodeIds: string[]): Promise<any> {
+        // Get all upstream dependencies for all target nodes
+        const allNodesToRun = new Set<string>();
+        for (const nodeId of targetNodeIds) {
+            const upstream = this.getUpstreamNodes(nodeId);
+            for (const id of upstream) {
+                allNodesToRun.add(id);
+            }
+        }
+
+        const nodesToRun = Array.from(allNodesToRun);
+
+        this.context.triggerType = 'PARTIAL';
+        this.context.targetNodeIds = targetNodeIds;
+
+        // Initialize with only target nodes
+        this.initialize(nodesToRun);
+
+        // Create Run record in DB
+        const runRecord = await prisma.run.create({
+            data: {
+                id: this.context.runId,
+                workflowId: this.context.workflowId,
+                status: 'RUNNING',
+                triggerType: 'PARTIAL',
+            },
+        });
+
+        try {
+            await this.runTopological(nodesToRun);
+
+            // Final status check (only for nodes that ran)
+            const ranNodes = Array.from(this.context.nodeRuns.values()).filter(r => r.status !== 'SKIPPED');
+            const allSuccess = ranNodes.every(r => r.status === 'SUCCESS');
+            const finalStatus = allSuccess ? 'SUCCESS' : 'FAILED';
+
+            // Calculate duration
+            const duration = ranNodes.reduce((acc, r) => {
+                if (r.startedAt && r.endedAt) {
+                    return acc + (r.endedAt.getTime() - r.startedAt.getTime());
+                }
+                return acc;
+            }, 0);
+
+            // Update Run record with results
+            await prisma.run.update({
+                where: { id: this.context.runId },
+                data: {
+                    status: finalStatus,
+                    duration,
+                    results: {
+                        create: ranNodes.map(r => ({
+                            nodeId: r.nodeId,
+                            nodeType: r.type,
+                            status: r.status,
+                            input: (r.inputs || {}) as any,
+                            output: (r.outputs || {}) as any,
+                            error: r.error,
+                            startedAt: r.startedAt || new Date(),
+                            endedAt: r.endedAt || new Date(),
+                        })),
+                    },
+                },
+            });
+
+            return {
+                runId: this.context.runId,
+                status: finalStatus,
+                triggerType: 'PARTIAL',
+                targetNodeIds,
+                results: ranNodes,
+            };
+
+        } catch (error) {
+            console.error('Partial execution failed:', error);
+            await prisma.run.update({
+                where: { id: this.context.runId },
+                data: { status: 'FAILED' },
+            });
+            throw error;
+        }
+    }
 }

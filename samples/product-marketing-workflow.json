@@ -1,0 +1,179 @@
+{
+    "nodes": [
+        {
+            "id": "text-system-1",
+            "type": "text",
+            "position": {
+                "x": 50,
+                "y": 50
+            },
+            "data": {
+                "text": "You are a professional marketing copywriter. Generate a compelling one-paragraph product description based on the product image provided."
+            }
+        },
+        {
+            "id": "text-product-1",
+            "type": "text",
+            "position": {
+                "x": 50,
+                "y": 200
+            },
+            "data": {
+                "text": "Product: Wireless Bluetooth Headphones. Features: Active noise cancellation, 30-hour battery life, premium comfort ear cushions, foldable design for travel."
+            }
+        },
+        {
+            "id": "upload-image-1",
+            "type": "upload-image",
+            "position": {
+                "x": 300,
+                "y": 50
+            },
+            "data": {
+                "imageUrl": "",
+                "label": "Upload Product Image"
+            }
+        },
+        {
+            "id": "crop-image-1",
+            "type": "crop-image",
+            "position": {
+                "x": 500,
+                "y": 50
+            },
+            "data": {
+                "xPercent": 10,
+                "yPercent": 10,
+                "widthPercent": 80,
+                "heightPercent": 80,
+                "label": "Crop to Center"
+            }
+        },
+        {
+            "id": "llm-product-1",
+            "type": "llm",
+            "position": {
+                "x": 300,
+                "y": 300
+            },
+            "data": {
+                "model": "gemini-1.5-flash",
+                "label": "Generate Product Description"
+            }
+        },
+        {
+            "id": "upload-video-1",
+            "type": "upload-video",
+            "position": {
+                "x": 700,
+                "y": 50
+            },
+            "data": {
+                "videoUrl": "",
+                "label": "Upload Demo Video"
+            }
+        },
+        {
+            "id": "extract-frame-1",
+            "type": "extract-frame",
+            "position": {
+                "x": 700,
+                "y": 200
+            },
+            "data": {
+                "timestamp": "50%",
+                "label": "Extract Middle Frame"
+            }
+        },
+        {
+            "id": "text-social-1",
+            "type": "text",
+            "position": {
+                "x": 500,
+                "y": 400
+            },
+            "data": {
+                "text": "You are a social media manager. Create a tweet-length marketing post (max 280 chars) based on the product description and images provided. Make it catchy and engaging!"
+            }
+        },
+        {
+            "id": "llm-social-1",
+            "type": "llm",
+            "position": {
+                "x": 700,
+                "y": 450
+            },
+            "data": {
+                "model": "gemini-1.5-flash",
+                "label": "Generate Social Media Post"
+            }
+        }
+    ],
+    "edges": [
+        {
+            "id": "e-img-crop",
+            "source": "upload-image-1",
+            "target": "crop-image-1",
+            "sourceHandle": "output",
+            "targetHandle": "image_url"
+        },
+        {
+            "id": "e-sys-llm1",
+            "source": "text-system-1",
+            "target": "llm-product-1",
+            "sourceHandle": "output",
+            "targetHandle": "system_prompt"
+        },
+        {
+            "id": "e-prod-llm1",
+            "source": "text-product-1",
+            "target": "llm-product-1",
+            "sourceHandle": "output",
+            "targetHandle": "user_message"
+        },
+        {
+            "id": "e-crop-llm1",
+            "source": "crop-image-1",
+            "target": "llm-product-1",
+            "sourceHandle": "output",
+            "targetHandle": "images"
+        },
+        {
+            "id": "e-video-extract",
+            "source": "upload-video-1",
+            "target": "extract-frame-1",
+            "sourceHandle": "output",
+            "targetHandle": "video_url"
+        },
+        {
+            "id": "e-social-llm2",
+            "source": "text-social-1",
+            "target": "llm-social-1",
+            "sourceHandle": "output",
+            "targetHandle": "system_prompt"
+        },
+        {
+            "id": "e-llm1-llm2",
+            "source": "llm-product-1",
+            "target": "llm-social-1",
+            "sourceHandle": "output",
+            "targetHandle": "user_message"
+        },
+        {
+            "id": "e-crop-llm2",
+            "source": "crop-image-1",
+            "target": "llm-social-1",
+            "sourceHandle": "output",
+            "targetHandle": "images"
+        },
+        {
+            "id": "e-frame-llm2",
+            "source": "extract-frame-1",
+            "target": "llm-social-1",
+            "sourceHandle": "output",
+            "targetHandle": "images"
+        }
+    ],
+    "name": "Product Marketing Kit Generator",
+    "description": "Demonstrates all 6 node types with parallel execution. Branch A processes image + generates description, Branch B extracts video frame. Both converge at final LLM node."
+}

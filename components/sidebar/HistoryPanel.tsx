@@ -68,6 +68,8 @@ export default function HistoryPanel() {
   const [showLiveLogs, setShowLiveLogs] = useState(true);
   const [displayLimit, setDisplayLimit] = useState(5);
   const logsRef = useRef<HTMLDivElement>(null);
+  const runsCache = useRef<{ workflowId: string | null; data: Run[]; timestamp: number }>({ workflowId: null, data: [], timestamp: 0 });
+  const lastTrigger = useRef<number>(0);
 
   // Auto-scroll logs
   useEffect(() => {
@@ -83,22 +85,49 @@ export default function HistoryPanel() {
     }
   }, [isRunning]);
 
-  const fetchHistory = async () => {
+  const fetchHistory = async (force = false) => {
     if (!workflowId) return;
+
+    const now = Date.now();
+    const CACHE_TTL = 10000; // 10 seconds
+
+    // Use cache if valid and not forced
+    if (!force &&
+      runsCache.current.workflowId === workflowId &&
+      runsCache.current.data.length > 0 &&
+      (now - runsCache.current.timestamp) < CACHE_TTL) {
+      setRuns(runsCache.current.data);
+      return;
+    }
+
     try {
       const res = await fetch(`/api/workflows/${workflowId}/runs`);
       if (res.ok) {
         const data = await res.json();
         setRuns(data);
+        runsCache.current = { workflowId, data, timestamp: now };
       }
     } catch (error) {
       console.error('Failed to fetch history:', error);
     }
   };
 
+  // Initial fetch when workflowId changes
   useEffect(() => {
-    fetchHistory();
-  }, [workflowId, historyTrigger]);
+    if (workflowId) {
+      fetchHistory();
+    } else {
+      setRuns([]);
+    }
+  }, [workflowId]);
+
+  // Only fetch on historyTrigger if it actually changed
+  useEffect(() => {
+    if (historyTrigger > lastTrigger.current && workflowId) {
+      lastTrigger.current = historyTrigger;
+      fetchHistory(true); // Force refresh after a run completes
+    }
+  }, [historyTrigger, workflowId]);
 
   const toggleExpand = (runId: string) => {
     setExpandedRunId(expandedRunId === runId ? null : runId);
@@ -149,7 +178,7 @@ export default function HistoryPanel() {
       <div className="flex items-center justify-between mb-3 shrink-0">
         <h2 className="text-sm font-semibold text-dark-text uppercase tracking-wide">Runs History</h2>
         <button
-          onClick={fetchHistory}
+          onClick={() => fetchHistory(true)}
           className="p-1.5 rounded-md hover:bg-dark-border transition-colors text-dark-text-muted hover:text-dark-text"
           title="Refresh"
         >

@@ -7,11 +7,11 @@ export async function POST(req: Request) {
   try {
     const { userId } = await auth();
     if (!userId) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await req.json();
-    const { workflowId, nodes, edges, targetNodeId } = body;
+    const { workflowId, nodes, edges, targetNodeId, targetNodeIds } = body;
 
     // Validate workflow ownership if ID is provided
     if (workflowId) {
@@ -19,21 +19,20 @@ export async function POST(req: Request) {
         where: { id: workflowId },
       });
 
-      if (!workflow || workflow.userId !== userId) {
-        // Allow running if it's a new unsaved workflow (workflowId might be temporary or missing)
-        // But if provided, it must be valid.
-        if (workflow && workflow.userId !== userId) {
-          return new NextResponse('Forbidden', { status: 403 });
-        }
+      if (workflow && workflow.userId !== userId) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
     }
 
     // Initialize Engine
     const engine = new WorkflowEngine(workflowId || 'temp', nodes, edges);
 
-    // Run Workflow or Single Node
+    // Run Workflow, Multiple Selected Nodes, or Single Node
     let result;
-    if (targetNodeId) {
+    if (targetNodeIds && Array.isArray(targetNodeIds) && targetNodeIds.length > 0) {
+      // Run multiple selected nodes with their dependencies
+      result = await engine.runNodes(targetNodeIds);
+    } else if (targetNodeId) {
       // Run single node with its dependencies
       result = await engine.runNode(targetNodeId);
     } else {
@@ -45,6 +44,6 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error('Run workflow error:', error);
-    return new NextResponse(JSON.stringify({ error: error.message }), { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

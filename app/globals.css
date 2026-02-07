@@ -68,9 +68,22 @@ body {
     display: none !important;
 }
 
-/* Edge styling */
+/* Edge styling - animated purple edges */
 .react-flow__edge-path {
     stroke: #6366f1 !important;
+    stroke-width: 2px;
+    stroke-dasharray: 5;
+    animation: flow 1s linear infinite;
+}
+
+@keyframes flow {
+    0% {
+        stroke-dashoffset: 10;
+    }
+
+    100% {
+        stroke-dashoffset: 0;
+    }
 }
 
 /* Selection box */

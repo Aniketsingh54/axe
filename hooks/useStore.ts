@@ -5,7 +5,9 @@ import {
   type OnNodesChange,
   type OnEdgesChange,
   applyNodeChanges,
-  applyEdgeChanges
+  applyEdgeChanges,
+  type NodeChange,
+  type EdgeChange,
 } from '@xyflow/react';
 
 type SetEdgesFunc = Edge[] | ((edges: Edge[]) => Edge[]);
@@ -19,6 +21,14 @@ export type ExecutionLog = {
   level: 'info' | 'success' | 'error' | 'warn';
   message: string;
 };
+
+// History state for undo/redo
+type HistoryState = {
+  nodes: Node[];
+  edges: Edge[];
+};
+
+const MAX_HISTORY_SIZE = 50;
 
 type AppState = {
   nodes: Node[];
@@ -44,6 +54,31 @@ type AppState = {
   // Single node execution
   pendingNodeRun: string | null;
   setPendingNodeRun: (nodeId: string | null) => void;
+  // Undo/Redo
+  past: HistoryState[];
+  future: HistoryState[];
+  undo: () => void;
+  redo: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
+  // Clear workflow
+  clearWorkflow: () => void;
+};
+
+// Helper to check if a change is significant (worth saving to history)
+const isSignificantNodeChange = (changes: NodeChange[]): boolean => {
+  return changes.some(change =>
+    change.type === 'add' ||
+    change.type === 'remove' ||
+    (change.type === 'position' && change.dragging === false)
+  );
+};
+
+const isSignificantEdgeChange = (changes: EdgeChange[]): boolean => {
+  return changes.some(change =>
+    change.type === 'add' ||
+    change.type === 'remove'
+  );
 };
 
 export const useStore = create<AppState>((set, get) => ({
@@ -54,8 +89,12 @@ export const useStore = create<AppState>((set, get) => ({
   executionLogs: [],
   isRunning: false,
   pendingNodeRun: null,
+  past: [],
+  future: [],
+
   setPendingNodeRun: (nodeId) => set({ pendingNodeRun: nodeId }),
   setIsRunning: (running) => set({ isRunning: running }),
+
   addExecutionLog: (log) => set((state) => ({
     executionLogs: [...state.executionLogs, {
       ...log,
@@ -63,23 +102,48 @@ export const useStore = create<AppState>((set, get) => ({
       timestamp: new Date(),
     }],
   })),
+
   clearExecutionLogs: () => set({ executionLogs: [] }),
   refreshHistory: () => set((state) => ({ historyTrigger: state.historyTrigger + 1 })),
+
   onNodesChange: (changes) => {
-    set({
-      nodes: applyNodeChanges(changes, get().nodes),
-    });
+    const { nodes, edges, past } = get();
+    const shouldSaveHistory = isSignificantNodeChange(changes);
+
+    const newNodes = applyNodeChanges(changes, nodes);
+
+    if (shouldSaveHistory) {
+      const newPast = [...past, { nodes, edges }].slice(-MAX_HISTORY_SIZE);
+      set({ nodes: newNodes, past: newPast, future: [] });
+    } else {
+      set({ nodes: newNodes });
+    }
   },
+
   onEdgesChange: (changes) => {
-    set({
-      edges: applyEdgeChanges(changes, get().edges),
-    });
+    const { nodes, edges, past } = get();
+    const shouldSaveHistory = isSignificantEdgeChange(changes);
+
+    const newEdges = applyEdgeChanges(changes, edges);
+
+    if (shouldSaveHistory) {
+      const newPast = [...past, { nodes, edges }].slice(-MAX_HISTORY_SIZE);
+      set({ edges: newEdges, past: newPast, future: [] });
+    } else {
+      set({ edges: newEdges });
+    }
   },
+
   addNode: (node) => {
+    const { nodes, edges, past } = get();
+    const newPast = [...past, { nodes, edges }].slice(-MAX_HISTORY_SIZE);
     set({
-      nodes: [...get().nodes, node],
+      nodes: [...nodes, node],
+      past: newPast,
+      future: [],
     });
   },
+
   updateNodeData: (id, data) => {
     set({
       nodes: get().nodes.map((node) =>
@@ -95,20 +159,72 @@ export const useStore = create<AppState>((set, get) => ({
       ),
     });
   },
+
   setNodes: (nodesOrFn) => {
-    if (typeof nodesOrFn === 'function') {
-      set({ nodes: nodesOrFn(get().nodes) });
-    } else {
-      set({ nodes: nodesOrFn });
-    }
+    const { nodes, edges, past } = get();
+    const newNodes = typeof nodesOrFn === 'function' ? nodesOrFn(nodes) : nodesOrFn;
+    const newPast = [...past, { nodes, edges }].slice(-MAX_HISTORY_SIZE);
+    set({ nodes: newNodes, past: newPast, future: [] });
   },
+
   setEdges: (edgesOrFn) => {
-    if (typeof edgesOrFn === 'function') {
-      set({ edges: edgesOrFn(get().edges) });
-    } else {
-      set({ edges: edgesOrFn });
-    }
+    const { nodes, edges, past } = get();
+    const newEdges = typeof edgesOrFn === 'function' ? edgesOrFn(edges) : edgesOrFn;
+    const newPast = [...past, { nodes, edges }].slice(-MAX_HISTORY_SIZE);
+    set({ edges: newEdges, past: newPast, future: [] });
   },
+
   setWorkflowId: (id) => set({ workflowId: id }),
-  loadWorkflow: (id, nodes, edges) => set({ workflowId: id, nodes, edges }),
+
+  loadWorkflow: (id, nodes, edges) => set({
+    workflowId: id,
+    nodes,
+    edges,
+    past: [],
+    future: [],
+  }),
+
+  // Undo/Redo
+  undo: () => {
+    const { past, nodes, edges, future } = get();
+    if (past.length === 0) return;
+
+    const previous = past[past.length - 1];
+    const newPast = past.slice(0, -1);
+
+    set({
+      nodes: previous.nodes,
+      edges: previous.edges,
+      past: newPast,
+      future: [{ nodes, edges }, ...future].slice(0, MAX_HISTORY_SIZE),
+    });
+  },
+
+  redo: () => {
+    const { past, nodes, edges, future } = get();
+    if (future.length === 0) return;
+
+    const next = future[0];
+    const newFuture = future.slice(1);
+
+    set({
+      nodes: next.nodes,
+      edges: next.edges,
+      past: [...past, { nodes, edges }].slice(-MAX_HISTORY_SIZE),
+      future: newFuture,
+    });
+  },
+
+  canUndo: () => get().past.length > 0,
+  canRedo: () => get().future.length > 0,
+
+  // Clear workflow for new workflow
+  clearWorkflow: () => set({
+    nodes: [],
+    edges: [],
+    workflowId: null,
+    past: [],
+    future: [],
+    executionLogs: [],
+  }),
 }));
