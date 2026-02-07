@@ -1,48 +1,43 @@
-import { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+import { WorkflowEngine } from '@/lib/workflow-engine';
+import { prisma } from '@/lib/prisma';
+import { auth } from '@clerk/nextjs/server';
 
-export async function POST(request: NextRequest) {
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
-    const { nodes, edges } = body;
+    const { userId } = await auth();
+    if (!userId) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
 
-    // In a real implementation, this would trigger the actual workflow execution
-    // via Trigger.dev, but for now we'll just simulate it
-    
-    console.log('Received workflow execution request:', { nodes: nodes.length, edges: edges.length });
-    
-    // Simulate a delay to mimic actual processing
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Return a success response
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Workflow execution started successfully',
-        executionId: `exec_${Date.now()}`,
-        nodeCount: nodes.length,
-        timestamp: new Date().toISOString()
-      }),
-      {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+    const body = await req.json();
+    const { workflowId, nodes, edges } = body;
+
+    // Validate workflow ownership if ID is provided
+    if (workflowId) {
+      const workflow = await prisma.workflow.findUnique({
+        where: { id: workflowId },
+      });
+
+      if (!workflow || workflow.userId !== userId) {
+        // Allow running if it's a new unsaved workflow (workflowId might be temporary or missing)
+        // But if provided, it must be valid.
+        if (workflow && workflow.userId !== userId) {
+          return new NextResponse('Forbidden', { status: 403 });
+        }
       }
-    );
-  } catch (error) {
-    console.error('Error running workflow:', error);
-    
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
-      }),
-      {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    }
+
+    // Initialize Engine
+    const engine = new WorkflowEngine(workflowId || 'temp', nodes, edges);
+
+    // Run Workflow
+    const result = await engine.run();
+
+    return NextResponse.json(result);
+
+  } catch (error: any) {
+    console.error('Run workflow error:', error);
+    return new NextResponse(JSON.stringify({ error: error.message }), { status: 500 });
   }
 }

@@ -16,7 +16,7 @@ import {
 } from '@xyflow/react';
 import { useStore } from '@/hooks/useStore';
 import { nodeTypes } from './config';
-import { Play, Square } from 'lucide-react';
+import { Play, Square, Save, Loader2 } from 'lucide-react';
 
 import '@xyflow/react/dist/style.css';
 
@@ -28,10 +28,13 @@ export default function WorkflowCanvas() {
     onEdgesChange,
     addNode,
     setEdges,
-    updateNodeData
+    updateNodeData,
+    workflowId,
+    setWorkflowId
   } = useStore();
   const { screenToFlowPosition } = useReactFlow();
   const [isRunning, setIsRunning] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -71,7 +74,7 @@ export default function WorkflowCanvas() {
             systemPrompt: '',
             userMessage: '',
             imageUrl: '',
-            model: 'gemini-1.5-pro',
+            model: 'gemini-1.5-flash',
             connectedSystem: false,
             connectedUser: false,
             connectedImage: false
@@ -121,73 +124,114 @@ export default function WorkflowCanvas() {
     [screenToFlowPosition, addNode]
   );
 
+  const handleSaveWorkflow = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/workflows', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: workflowId,
+          name: 'My Workflow',
+          nodes,
+          edges,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to save');
+
+      const savedWorkflow = await response.json();
+      setWorkflowId(savedWorkflow.id);
+      // alert('Workflow saved!');
+    } catch (error) {
+      console.error('Save failed:', error);
+      alert('Failed to save workflow');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleRunWorkflow = async () => {
-    if (isRunning) return; // Prevent multiple simultaneous runs
+    if (isRunning) return;
+
+    // Auto-save before running
+    await handleSaveWorkflow();
 
     setIsRunning(true);
 
-    // Toggle all nodes to running state
+    // Set all to running visual state (optional, or engine handles it)
     nodes.forEach(node => {
-      updateNodeData(node.id, { isRunning: true });
+      updateNodeData(node.id, { isRunning: true, error: undefined, output: undefined });
     });
 
     try {
-      // Simulate the workflow execution by calling the trigger API
       const response = await fetch('/api/run-workflow', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          nodes: nodes.map(n => ({ id: n.id, type: n.type, data: n.data })),
-          edges 
+        body: JSON.stringify({
+          workflowId, // Pass the ID we just saved (or null if save failed, but handled above)
+          nodes,
+          edges
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const err = await response.json();
+        throw new Error(err.error || `HTTP error! status: ${response.status}`);
       }
 
       const result = await response.json();
       console.log('Workflow execution result:', result);
-    } catch (error) {
-      console.error('Error running workflow:', error);
-    } finally {
-      // Reset running state after a delay
-      setTimeout(() => {
-        // Toggle all nodes back to non-running state
-        nodes.forEach(node => {
-          updateNodeData(node.id, { isRunning: false });
+
+      // Update nodes with results
+      if (result.results) {
+        result.results.forEach((nodeResult: any) => {
+          updateNodeData(nodeResult.nodeId, {
+            isRunning: false,
+            output: nodeResult.outputs?.output,
+            error: nodeResult.error,
+          });
         });
-        setIsRunning(false);
-      }, 2000); // 2 second delay to match the simulated task duration
+      }
+
+    } catch (error: any) {
+      console.error('Error running workflow:', error);
+      alert(`Execution failed: ${error.message}`);
+      // Reset running state
+      nodes.forEach(node => {
+        updateNodeData(node.id, { isRunning: false });
+      });
+    } finally {
+      setIsRunning(false);
     }
   };
 
   return (
     <div className="relative h-full">
-      {/* Run Workflow Button */}
+      {/* Action Buttons */}
       <div className="absolute top-4 right-4 z-10 flex gap-2">
+        <button
+          onClick={handleSaveWorkflow}
+          disabled={isSaving}
+          className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors bg-dark-bg border border-dark-border text-dark-text hover:bg-dark-border"
+        >
+          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {isSaving ? 'Saving...' : 'Save'}
+        </button>
+
         <button
           onClick={handleRunWorkflow}
           disabled={isRunning || nodes.length === 0}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            isRunning || nodes.length === 0
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-indigo-600 text-white hover:bg-indigo-700'
-          }`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${isRunning || nodes.length === 0
+            ? 'bg-wy-500/50 text-white/50 cursor-not-allowed'
+            : 'bg-wy-500 text-white hover:bg-wy-600'
+            }`}
         >
-          {isRunning ? (
-            <>
-              <Square className="w-4 h-4" />
-              Running...
-            </>
-          ) : (
-            <>
-              <Play className="w-4 h-4" />
-              Run Workflow
-            </>
-          )}
+          {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+          {isRunning ? 'Running...' : 'Run Workflow'}
         </button>
       </div>
 
@@ -210,10 +254,11 @@ export default function WorkflowCanvas() {
           gap={20}
           color="#3a3a3a"
         />
-        <Controls />
+        <Controls className="bg-dark-surface border-dark-border fill-dark-text" />
         <MiniMap
           nodeColor={() => '#6366f1'}
           maskColor="rgba(0, 0, 0, 0.7)"
+          className="bg-dark-surface border-dark-border"
         />
       </ReactFlow>
     </div>

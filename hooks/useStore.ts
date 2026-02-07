@@ -19,11 +19,14 @@ type AppState = {
   updateNodeData: (id: string, data: Record<string, unknown>) => void;
   setNodes: (nodes: Node[] | ((nodes: Node[]) => Node[])) => void;
   setEdges: (edges: SetEdgesFunc) => void;
+  workflowId: string | null;
+  setWorkflowId: (id: string | null) => void;
 };
 
 export const useStore = create<AppState>((set, get) => ({
   nodes: [],
   edges: [],
+  workflowId: null,
   onNodesChange: (changes) => {
     set({
       nodes: applyNodeChanges(changes, get().nodes),
@@ -68,4 +71,5 @@ export const useStore = create<AppState>((set, get) => ({
       set({ edges: edgesOrFn });
     }
   },
+  setWorkflowId: (id) => set({ workflowId: id }),
 }));

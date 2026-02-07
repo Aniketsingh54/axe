@@ -5,8 +5,19 @@ import { tasks } from "@trigger.dev/sdk/v3";
  */
 export const triggerClient = {
   trigger: async (taskId: string, payload: Record<string, unknown>) => {
-    // This connects to the cloud or local dev server to trigger the task
+    // Basic fire-and-forget (returns handle)
     return await tasks.trigger(taskId, payload);
+  },
+  triggerAndWait: async (taskId: string, payload: Record<string, unknown>) => {
+    // Wait for completion and return result
+    // Trigger.dev v3 SDK has triggerAndPoll
+    const run = await tasks.triggerAndPoll(taskId, payload);
+
+    if (run.status === "COMPLETED") {
+      return run.output;
+    } else {
+      throw new Error(`Task ${taskId} failed with status: ${run.status}`);
+    }
   }
 };
 
