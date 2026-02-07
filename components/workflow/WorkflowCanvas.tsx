@@ -22,6 +22,19 @@ import { isValidConnection as validateConnection } from '@/lib/graph';
 
 import '@xyflow/react/dist/style.css';
 
+// Helper to strip runtime data from nodes to reduce API payload size
+const getCleanNodes = (nodes: Node[]) => nodes.map(node => ({
+  id: node.id,
+  type: node.type,
+  position: node.position,
+  data: {
+    ...node.data,
+    output: undefined,
+    error: undefined,
+    isRunning: undefined,
+  },
+}));
+
 export default function WorkflowCanvas() {
   const {
     nodes,
@@ -178,26 +191,13 @@ export default function WorkflowCanvas() {
     if (isSaving) return;
     setIsSaving(true);
     try {
-      // Strip runtime data (output, error, isRunning) to reduce payload size
-      const cleanNodes = nodes.map(node => ({
-        id: node.id,
-        type: node.type,
-        position: node.position,
-        data: {
-          ...node.data,
-          output: undefined,
-          error: undefined,
-          isRunning: undefined,
-        },
-      }));
-
       const response = await fetch('/api/workflows', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: workflowId,
           name: 'My Workflow',
-          nodes: cleanNodes,
+          nodes: getCleanNodes(nodes),
           edges,
         }),
       });
@@ -246,7 +246,7 @@ export default function WorkflowCanvas() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           workflowId,
-          nodes,
+          nodes: getCleanNodes(nodes),
           edges,
           targetNodeId,
         }),
@@ -335,7 +335,7 @@ export default function WorkflowCanvas() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           workflowId,
-          nodes,
+          nodes: getCleanNodes(nodes),
           edges,
           targetNodeIds: selectedNodeIds,
         }),
@@ -425,7 +425,7 @@ export default function WorkflowCanvas() {
       const response = await fetch('/api/run-workflow', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workflowId, nodes, edges }),
+        body: JSON.stringify({ workflowId, nodes: getCleanNodes(nodes), edges }),
       });
 
       if (!response.ok) {
