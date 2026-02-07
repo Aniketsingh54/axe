@@ -7,53 +7,64 @@ interface LLMNodeData {
   model?: string;
   systemPrompt?: string;
   userMessage?: string;
-  imageUrl?: string;
   connectedSystem?: boolean;
   connectedUser?: boolean;
-  connectedImage?: boolean;
+  connectedImages?: boolean;
   output?: string;
+  isRunning?: boolean;
 }
 
+/**
+ * LLM Node - Run Any LLM
+ * Input Handles (3):
+ *   1. system_prompt - from Text Node (optional)
+ *   2. user_message - from Text Node (required)
+ *   3. images - from Image Node(s) (optional, supports multiple)
+ * Output Handle (1):
+ *   - output - Text response from LLM
+ * Results displayed directly on node (not separate output node)
+ */
 const LLMNode = memo(({ id, data, selected }: NodeProps<LLMNodeData>) => {
   const {
     model = 'gemini-1.5-pro',
     systemPrompt = '',
     userMessage = '',
-    imageUrl = '',
     connectedSystem = false,
     connectedUser = false,
-    connectedImage = false,
-    output = ''
+    connectedImages = false,
+    output = '',
+    isRunning = false
   } = data || {};
 
   return (
-    <BaseNode id={id} title="LLM" icon={<Sparkles className="w-3 h-3" />} selected={selected}>
+    <BaseNode id={id} title="Run Any LLM" icon={<Sparkles className="w-3 h-3" />} selected={selected} isRunning={isRunning}>
       {/* 3 Input Handles - Left side */}
-      <Handle type="target" position={Position.Left} id="system" className="!bg-wy-500 !w-1.5 !h-1.5 !border-0" style={{ top: '28%' }} />
-      <Handle type="target" position={Position.Left} id="user" className="!bg-wy-500 !w-1.5 !h-1.5 !border-0" style={{ top: '50%' }} />
-      <Handle type="target" position={Position.Left} id="image" className="!bg-wy-500 !w-1.5 !h-1.5 !border-0" style={{ top: '72%' }} />
+      <Handle type="target" position={Position.Left} id="system_prompt" className="!bg-wy-500 !w-2 !h-2 !border-0" style={{ top: '25%' }} />
+      <Handle type="target" position={Position.Left} id="user_message" className="!bg-wy-500 !w-2 !h-2 !border-0" style={{ top: '50%' }} />
+      <Handle type="target" position={Position.Left} id="images" className="!bg-wy-500 !w-2 !h-2 !border-0" style={{ top: '75%' }} />
 
       {/* Output Handle - Right side */}
-      <Handle type="source" position={Position.Right} id="output" className="!bg-wy-500 !w-1.5 !h-1.5 !border-0" />
+      <Handle type="source" position={Position.Right} id="output" className="!bg-wy-500 !w-2 !h-2 !border-0" />
 
       <div className="space-y-1.5">
-        {/* Model Select */}
+        {/* Model Selector */}
         <div>
           <label className="text-[9px] text-dark-text-muted uppercase tracking-wide">Model</label>
           <select className="w-full p-1 text-[10px] border rounded bg-dark-bg border-dark-border text-dark-text" value={model} onChange={() => { }}>
-            <option value="gemini-1.5-pro">Gemini Pro</option>
-            <option value="gemini-1.5-flash">Gemini Flash</option>
+            <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+            <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+            <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
           </select>
         </div>
 
-        {/* System Prompt Input */}
+        {/* System Prompt */}
         <div className="relative">
           <label className="text-[9px] text-dark-text-muted uppercase tracking-wide flex items-center gap-1">
             <span className="w-1 h-1 rounded-full bg-wy-500"></span>
             System Prompt
           </label>
           <textarea
-            className={`w-full p-1 text-[10px] border rounded resize-none bg-dark-bg border-dark-border text-dark-text placeholder-dark-text-muted ${connectedSystem ? 'opacity-50' : ''}`}
+            className={`w-full p-1 text-[10px] border rounded resize-none bg-dark-bg border-dark-border text-dark-text placeholder-dark-text-muted ${connectedSystem ? 'opacity-50 cursor-not-allowed' : ''}`}
             rows={1}
             value={systemPrompt}
             placeholder={connectedSystem ? "◀ Connected" : "You are a helpful..."}
@@ -62,14 +73,14 @@ const LLMNode = memo(({ id, data, selected }: NodeProps<LLMNodeData>) => {
           />
         </div>
 
-        {/* User Prompt Input */}
+        {/* User Message (Required) */}
         <div>
           <label className="text-[9px] text-dark-text-muted uppercase tracking-wide flex items-center gap-1">
             <span className="w-1 h-1 rounded-full bg-wy-500"></span>
-            User Prompt
+            User Message *
           </label>
           <textarea
-            className={`w-full p-1 text-[10px] border rounded resize-none bg-dark-bg border-dark-border text-dark-text placeholder-dark-text-muted ${connectedUser ? 'opacity-50' : ''}`}
+            className={`w-full p-1 text-[10px] border rounded resize-none bg-dark-bg border-dark-border text-dark-text placeholder-dark-text-muted ${connectedUser ? 'opacity-50 cursor-not-allowed' : ''}`}
             rows={1}
             value={userMessage}
             placeholder={connectedUser ? "◀ Connected" : "Your question..."}
@@ -78,27 +89,24 @@ const LLMNode = memo(({ id, data, selected }: NodeProps<LLMNodeData>) => {
           />
         </div>
 
-        {/* Image Input */}
+        {/* Images indicator */}
         <div>
           <label className="text-[9px] text-dark-text-muted uppercase tracking-wide flex items-center gap-1">
             <span className="w-1 h-1 rounded-full bg-wy-500"></span>
-            Image (optional)
+            Images (optional)
           </label>
-          <input
-            type="text"
-            className={`w-full p-1 text-[10px] border rounded bg-dark-bg border-dark-border text-dark-text placeholder-dark-text-muted ${connectedImage ? 'opacity-50' : ''}`}
-            value={imageUrl}
-            placeholder={connectedImage ? "◀ Connected" : "Image URL..."}
-            disabled={connectedImage}
-            onChange={() => { }}
-          />
+          <div className={`p-1 text-[10px] border rounded bg-dark-bg border-dark-border text-dark-text-muted ${connectedImages ? 'border-wy-500' : ''}`}>
+            {connectedImages ? "◀ Images connected" : "Connect image nodes →"}
+          </div>
         </div>
 
-        {/* Output */}
+        {/* Result Display - directly on node per spec */}
         {output && (
-          <div>
+          <div className="mt-2 p-1.5 bg-wy-500/10 border border-wy-500/30 rounded">
             <label className="text-[9px] text-wy-400 uppercase tracking-wide">Output →</label>
-            <div className="p-1 bg-dark-muted rounded text-[9px] text-dark-text truncate">{output.slice(0, 40)}...</div>
+            <div className="text-[10px] text-dark-text mt-0.5 max-h-16 overflow-y-auto">
+              {output}
+            </div>
           </div>
         )}
       </div>

@@ -28,6 +28,8 @@
     "@clerk/nextjs": "^6.37.3",
     "@prisma/client": "^7.3.0",
     "@tailwindcss/postcss": "^4.1.18",
+    "@trigger.dev/nextjs": "^3.3.12",
+    "@trigger.dev/sdk": "^3.3.17",
     "@types/node": "^25.2.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

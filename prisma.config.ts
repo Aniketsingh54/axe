@@ -9,6 +9,7 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Use DATABASE_URL (transaction pooler) for Supabase - removes pgbouncer query param
+    url: process.env["DATABASE_URL"]?.replace("?pgbouncer=true", "") || process.env["DATABASE_URL"],
   },
 });
