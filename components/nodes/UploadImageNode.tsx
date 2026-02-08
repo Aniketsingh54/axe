@@ -69,7 +69,8 @@ const UploadImageNode = memo(({ id, data, selected }: NodeProps<UploadImageNodeT
     } catch (error) {
       console.error('Upload error:', error);
       updateNodeData(id, { isUploading: false });
-      alert('Upload failed. Check Vercel Blob configuration.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Upload failed: ${errorMessage}`);
     }
   }, [id, updateNodeData]);
 
