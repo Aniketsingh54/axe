@@ -8,6 +8,7 @@ import { useStore } from '@/hooks/useStore';
 
 interface ExtractFrameNodeData extends Record<string, unknown> {
   timestamp?: number | string;
+  label?: string;
   output?: string;
   isRunning?: boolean;
   error?: string;
@@ -26,6 +27,7 @@ type ExtractFrameNodeType = Node<ExtractFrameNodeData>;
  */
 const ExtractFrameNode = memo(({ id, data, selected }: NodeProps<ExtractFrameNodeType>) => {
   const timestamp = (data.timestamp as number | string) || 0;
+  const label = (data.label as string) || 'Extract Frame';
   const output = (data.output as string) || '';
   const isRunning = (data.isRunning as boolean) || false;
   const error = (data.error as string) || '';
@@ -55,7 +57,7 @@ const ExtractFrameNode = memo(({ id, data, selected }: NodeProps<ExtractFrameNod
   }, [id, updateNodeData]);
 
   return (
-    <BaseNode id={id} title="Extract Frame" icon={<Film className="w-3 h-3" />} selected={selected} isRunning={isRunning} onRunNode={handleRunNode}>
+    <BaseNode id={id} title={label} icon={<Film className="w-3 h-3" />} selected={selected} isRunning={isRunning} onRunNode={handleRunNode}>
       {/* Input Handles - Left side */}
       <Handle
         type="target"
@@ -73,7 +75,7 @@ const ExtractFrameNode = memo(({ id, data, selected }: NodeProps<ExtractFrameNod
       />
 
       {/* Output Handle - Right side */}
-      <Handle type="source" position={Position.Right} className="!bg-wy-500 !w-2 !h-2 !border-0" />
+      <Handle type="source" position={Position.Right} id="output" className="!bg-wy-500 !w-2 !h-2 !border-0" />
 
       <div className="space-y-1.5">
         {/* Video Input */}

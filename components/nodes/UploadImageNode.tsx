@@ -10,6 +10,7 @@ import { useStore } from '@/hooks/useStore';
 interface UploadImageNodeData extends Record<string, unknown> {
   imageUrl?: string;
   fileName?: string;
+  label?: string;
   isRunning?: boolean;
   isUploading?: boolean;
 }
@@ -25,6 +26,7 @@ type UploadImageNodeType = Node<UploadImageNodeData>;
 const UploadImageNode = memo(({ id, data, selected }: NodeProps<UploadImageNodeType>) => {
   const imageUrl = (data.imageUrl as string) || '';
   const fileName = (data.fileName as string) || '';
+  const label = (data.label as string) || 'Upload Image';
   const isRunning = (data.isRunning as boolean) || false;
   const isUploading = (data.isUploading as boolean) || false;
 
@@ -53,7 +55,7 @@ const UploadImageNode = memo(({ id, data, selected }: NodeProps<UploadImageNodeT
     setUploadProgress(0);
 
     try {
-      const { uploadFile } = await import('@/lib/transloadit');
+      const { uploadFile } = await import('@/lib/blob');
       const url = await uploadFile(file, (progress) => {
         setUploadProgress(progress);
       });
@@ -83,9 +85,9 @@ const UploadImageNode = memo(({ id, data, selected }: NodeProps<UploadImageNodeT
   }, []);
 
   return (
-    <BaseNode id={id} title="Upload Image" icon={<Image className="w-3 h-3" />} selected={selected} isRunning={isRunning} onRunNode={handleRunNode}>
+    <BaseNode id={id} title={label} icon={<Image className="w-3 h-3" />} selected={selected} isRunning={isRunning} onRunNode={handleRunNode}>
       {/* Output Handle - Right side only */}
-      <Handle type="source" position={Position.Right} className="!bg-wy-500 !w-2 !h-2 !border-0" />
+      <Handle type="source" position={Position.Right} id="output" className="!bg-wy-500 !w-2 !h-2 !border-0" />
 
       {/* Hidden file input */}
       <input

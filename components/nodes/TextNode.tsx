@@ -35,7 +35,7 @@ const TextNode = memo(({ id, data, selected }: NodeProps<TextNodeType>) => {
   return (
     <BaseNode id={id} title="Text" icon={<Type className="w-3 h-3" />} selected={selected} isRunning={isRunning} onRunNode={handleRunNode}>
       {/* Output Handle - Right side only */}
-      <Handle type="source" position={Position.Right} className="!bg-wy-500 !w-2 !h-2 !border-0" />
+      <Handle type="source" position={Position.Right} id="output" className="!bg-wy-500 !w-2 !h-2 !border-0" />
 
       <div className="flex flex-col gap-1">
         <label className="text-[9px] text-dark-text-muted uppercase tracking-wide">Content</label>

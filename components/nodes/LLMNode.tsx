@@ -8,6 +8,7 @@ import { useStore } from '@/hooks/useStore';
 
 interface LLMNodeData extends Record<string, unknown> {
   model?: string;
+  label?: string;
   systemPrompt?: string;
   userMessage?: string;
   output?: string;
@@ -24,6 +25,7 @@ type LLMNodeType = Node<LLMNodeData>;
  */
 const LLMNode = memo(({ id, data, selected }: NodeProps<LLMNodeType>) => {
   const model = (data.model as string) || 'gemini-1.5-flash';
+  const label = (data.label as string) || 'Run Any LLM';
   const systemPrompt = (data.systemPrompt as string) || '';
   const userMessage = (data.userMessage as string) || '';
   const output = (data.output as string) || '';
@@ -59,7 +61,7 @@ const LLMNode = memo(({ id, data, selected }: NodeProps<LLMNodeType>) => {
   }, [id, updateNodeData]);
 
   return (
-    <BaseNode id={id} title="Run Any LLM" icon={<Sparkles className="w-3 h-3" />} selected={selected} isRunning={isRunning} onRunNode={handleRunNode}>
+    <BaseNode id={id} title={label} icon={<Sparkles className="w-3 h-3" />} selected={selected} isRunning={isRunning} onRunNode={handleRunNode}>
       {/* Input Handles - Left side */}
       <Handle
         type="target"

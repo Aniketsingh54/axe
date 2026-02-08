@@ -7,10 +7,13 @@ import {
   Video,
   Sparkles,
   Crop,
-  Film
+  Film,
+  FileDown
 } from 'lucide-react';
 
 import WorkflowList from './WorkflowList';
+import { useStore } from '@/hooks/useStore';
+import sampleWorkflow from '@/samples/product-marketing-workflow.json';
 
 interface DraggableNodeButtonProps {
   icon: React.ReactNode;
@@ -39,6 +42,15 @@ const DraggableNodeButton = ({ icon, label, nodeType }: DraggableNodeButtonProps
 };
 
 export default function NodePalette() {
+  const { setNodes, setEdges, setWorkflowId } = useStore();
+
+  const handleLoadSample = () => {
+    // Clear existing workflow and load sample
+    setWorkflowId(null);
+    setNodes(sampleWorkflow.nodes);
+    setEdges(sampleWorkflow.edges);
+  };
+
   return (
     <div className="p-4">
       <h2 className="text-lg font-semibold text-dark-text mb-4">Quick Access</h2>
@@ -84,6 +96,16 @@ export default function NodePalette() {
           label="Extract Frame"
           nodeType="extract-frame"
         />
+      </div>
+
+      <div className="my-4">
+        <button
+          onClick={handleLoadSample}
+          className="w-full flex items-center justify-center gap-2 p-3 rounded-lg border border-wy-600/50 bg-wy-600/10 hover:bg-wy-600/20 text-wy-400 transition-colors"
+        >
+          <FileDown className="w-4 h-4" />
+          <span className="text-sm font-medium">Load Sample Workflow</span>
+        </button>
       </div>
 
       <div className="my-6 border-t border-dark-border" />

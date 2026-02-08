@@ -676,6 +676,10 @@ export default function WorkflowCanvas() {
         onSelectionChange={onSelectionChange}
         isValidConnection={isValidConnection}
         nodeTypes={nodeTypes as NodeTypes}
+        defaultEdgeOptions={{
+          animated: true,
+          style: { stroke: '#8b5cf6', strokeWidth: 2, strokeDasharray: '5,5' },
+        }}
         fitView
         minZoom={0.1}
         maxZoom={4}

@@ -11,6 +11,7 @@ interface CropImageNodeData extends Record<string, unknown> {
   yPercent?: number;
   widthPercent?: number;
   heightPercent?: number;
+  label?: string;
   output?: string;
   isRunning?: boolean;
   error?: string;
@@ -28,6 +29,7 @@ const CropImageNode = memo(({ id, data, selected }: NodeProps<CropImageNodeType>
   const yPercent = (data.yPercent as number) || 0;
   const widthPercent = (data.widthPercent as number) || 100;
   const heightPercent = (data.heightPercent as number) || 100;
+  const label = (data.label as string) || 'Crop Image';
   const output = (data.output as string) || '';
   const isRunning = (data.isRunning as boolean) || false;
   const error = (data.error as string) || '';
@@ -57,7 +59,7 @@ const CropImageNode = memo(({ id, data, selected }: NodeProps<CropImageNodeType>
   }, [id, updateNodeData]);
 
   return (
-    <BaseNode id={id} title="Crop Image" icon={<Crop className="w-3 h-3" />} selected={selected} isRunning={isRunning} onRunNode={handleRunNode}>
+    <BaseNode id={id} title={label} icon={<Crop className="w-3 h-3" />} selected={selected} isRunning={isRunning} onRunNode={handleRunNode}>
       {/* Input Handles - Left side */}
       <Handle type="target" position={Position.Left} id="image_url" className="!bg-wy-500 !w-2 !h-2 !border-0" style={{ top: '15%' }} />
       <Handle type="target" position={Position.Left} id="x_percent" className="!bg-wy-500 !w-2 !h-2 !border-0" style={{ top: '30%' }} />
@@ -66,7 +68,7 @@ const CropImageNode = memo(({ id, data, selected }: NodeProps<CropImageNodeType>
       <Handle type="target" position={Position.Left} id="height_percent" className="!bg-wy-500 !w-2 !h-2 !border-0" style={{ top: '75%' }} />
 
       {/* Output Handle - Right side */}
-      <Handle type="source" position={Position.Right} className="!bg-wy-500 !w-2 !h-2 !border-0" />
+      <Handle type="source" position={Position.Right} id="output" className="!bg-wy-500 !w-2 !h-2 !border-0" />
 
       <div className="space-y-1">
         {/* Image Input */}

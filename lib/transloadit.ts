@@ -131,11 +131,7 @@ export async function uploadFile(
     const authKey = process.env.NEXT_PUBLIC_TRANSLOADIT_AUTH_KEY;
 
     if (authKey) {
-        try {
-            return await uploadToTransloadit({ file, onProgress });
-        } catch (error) {
-            console.error("Transloadit upload failed, falling back to Data URL:", error);
-        }
+        return await uploadToTransloadit({ file, onProgress });
     }
 
     // Fallback to data URL (only if no auth key or upload fails)

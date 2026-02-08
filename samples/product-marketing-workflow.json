@@ -16,7 +16,7 @@
             "type": "text",
             "position": {
                 "x": 50,
-                "y": 200
+                "y": 300
             },
             "data": {
                 "text": "Product: Wireless Bluetooth Headphones. Features: Active noise cancellation, 30-hour battery life, premium comfort ear cushions, foldable design for travel."
@@ -26,8 +26,8 @@
             "id": "upload-image-1",
             "type": "upload-image",
             "position": {
-                "x": 300,
-                "y": 50
+                "x": 50,
+                "y": 550
             },
             "data": {
                 "imageUrl": "",
@@ -39,7 +39,7 @@
             "type": "crop-image",
             "position": {
                 "x": 500,
-                "y": 50
+                "y": 550
             },
             "data": {
                 "xPercent": 10,
@@ -53,7 +53,7 @@
             "id": "llm-product-1",
             "type": "llm",
             "position": {
-                "x": 300,
+                "x": 950,
                 "y": 300
             },
             "data": {
@@ -65,8 +65,8 @@
             "id": "upload-video-1",
             "type": "upload-video",
             "position": {
-                "x": 700,
-                "y": 50
+                "x": 50,
+                "y": 800
             },
             "data": {
                 "videoUrl": "",
@@ -77,8 +77,8 @@
             "id": "extract-frame-1",
             "type": "extract-frame",
             "position": {
-                "x": 700,
-                "y": 200
+                "x": 500,
+                "y": 800
             },
             "data": {
                 "timestamp": "50%",
@@ -89,8 +89,8 @@
             "id": "text-social-1",
             "type": "text",
             "position": {
-                "x": 500,
-                "y": 400
+                "x": 950,
+                "y": 550
             },
             "data": {
                 "text": "You are a social media manager. Create a tweet-length marketing post (max 280 chars) based on the product description and images provided. Make it catchy and engaging!"
@@ -100,8 +100,8 @@
             "id": "llm-social-1",
             "type": "llm",
             "position": {
-                "x": 700,
-                "y": 450
+                "x": 1400,
+                "y": 550
             },
             "data": {
                 "model": "gemini-1.5-flash",
@@ -115,63 +115,117 @@
             "source": "upload-image-1",
             "target": "crop-image-1",
             "sourceHandle": "output",
-            "targetHandle": "image_url"
+            "targetHandle": "image_url",
+            "animated": true,
+            "style": {
+                "stroke": "#8b5cf6",
+                "strokeWidth": 2,
+                "strokeDasharray": "5,5"
+            }
         },
         {
             "id": "e-sys-llm1",
             "source": "text-system-1",
             "target": "llm-product-1",
             "sourceHandle": "output",
-            "targetHandle": "system_prompt"
+            "targetHandle": "system_prompt",
+            "animated": true,
+            "style": {
+                "stroke": "#8b5cf6",
+                "strokeWidth": 2,
+                "strokeDasharray": "5,5"
+            }
         },
         {
             "id": "e-prod-llm1",
             "source": "text-product-1",
             "target": "llm-product-1",
             "sourceHandle": "output",
-            "targetHandle": "user_message"
+            "targetHandle": "user_message",
+            "animated": true,
+            "style": {
+                "stroke": "#8b5cf6",
+                "strokeWidth": 2,
+                "strokeDasharray": "5,5"
+            }
         },
         {
             "id": "e-crop-llm1",
             "source": "crop-image-1",
             "target": "llm-product-1",
             "sourceHandle": "output",
-            "targetHandle": "images"
+            "targetHandle": "images",
+            "animated": true,
+            "style": {
+                "stroke": "#8b5cf6",
+                "strokeWidth": 2,
+                "strokeDasharray": "5,5"
+            }
         },
         {
             "id": "e-video-extract",
             "source": "upload-video-1",
             "target": "extract-frame-1",
             "sourceHandle": "output",
-            "targetHandle": "video_url"
+            "targetHandle": "video_url",
+            "animated": true,
+            "style": {
+                "stroke": "#8b5cf6",
+                "strokeWidth": 2,
+                "strokeDasharray": "5,5"
+            }
         },
         {
             "id": "e-social-llm2",
             "source": "text-social-1",
             "target": "llm-social-1",
             "sourceHandle": "output",
-            "targetHandle": "system_prompt"
+            "targetHandle": "system_prompt",
+            "animated": true,
+            "style": {
+                "stroke": "#8b5cf6",
+                "strokeWidth": 2,
+                "strokeDasharray": "5,5"
+            }
         },
         {
             "id": "e-llm1-llm2",
             "source": "llm-product-1",
             "target": "llm-social-1",
             "sourceHandle": "output",
-            "targetHandle": "user_message"
+            "targetHandle": "user_message",
+            "animated": true,
+            "style": {
+                "stroke": "#8b5cf6",
+                "strokeWidth": 2,
+                "strokeDasharray": "5,5"
+            }
         },
         {
             "id": "e-crop-llm2",
             "source": "crop-image-1",
             "target": "llm-social-1",
             "sourceHandle": "output",
-            "targetHandle": "images"
+            "targetHandle": "images",
+            "animated": true,
+            "style": {
+                "stroke": "#8b5cf6",
+                "strokeWidth": 2,
+                "strokeDasharray": "5,5"
+            }
         },
         {
             "id": "e-frame-llm2",
             "source": "extract-frame-1",
             "target": "llm-social-1",
             "sourceHandle": "output",
-            "targetHandle": "images"
+            "targetHandle": "images",
+            "animated": true,
+            "style": {
+                "stroke": "#8b5cf6",
+                "strokeWidth": 2,
+                "strokeDasharray": "5,5"
+            }
         }
     ],
     "name": "Product Marketing Kit Generator",
