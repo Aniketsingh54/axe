@@ -21,6 +21,7 @@ export async function POST(request: Request): Promise<NextResponse> {
                     tokenPayload: JSON.stringify({
                         // optional payload
                     }),
+                    addRandomSuffix: true,
                 };
             },
             onUploadCompleted: async ({ blob, tokenPayload }) => {
