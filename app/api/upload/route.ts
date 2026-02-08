@@ -14,7 +14,10 @@ export async function POST(request: Request): Promise<NextResponse> {
                 // if (!user) throw new Error('Unauthorized');
 
                 return {
-                    allowedContentTypes: ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/webm'],
+                    allowedContentTypes: [
+                        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+                        'video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v'
+                    ],
                     tokenPayload: JSON.stringify({
                         // optional payload
                     }),

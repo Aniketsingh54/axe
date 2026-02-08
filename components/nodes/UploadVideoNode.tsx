@@ -68,7 +68,7 @@ const UploadVideoNode = memo(({ id, data, selected }: NodeProps<UploadVideoNodeT
     } catch (error) {
       console.error('Upload error:', error);
       updateNodeData(id, { isUploading: false });
-      alert('Upload failed. Check Transloadit configuration.');
+      alert('Upload failed. Check Vercel Blob configuration.');
     }
   }, [id, updateNodeData]);
 
