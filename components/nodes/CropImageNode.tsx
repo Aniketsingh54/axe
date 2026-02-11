@@ -3,7 +3,7 @@
 import { memo, useCallback } from 'react';
 import { Handle, Position, NodeProps, Node, useHandleConnections } from '@xyflow/react';
 import { Crop, Loader2 } from 'lucide-react';
-import BaseNode from './BaseNode';
+import BaseNode, { type NodeRunStatus } from './BaseNode';
 import { useStore } from '@/hooks/useStore';
 
 interface CropImageNodeData extends Record<string, unknown> {
@@ -14,6 +14,7 @@ interface CropImageNodeData extends Record<string, unknown> {
   label?: string;
   output?: string;
   isRunning?: boolean;
+  runStatus?: NodeRunStatus;
   error?: string;
 }
 
@@ -32,6 +33,7 @@ const CropImageNode = memo(({ id, data, selected }: NodeProps<CropImageNodeType>
   const label = (data.label as string) || 'Crop Image';
   const output = (data.output as string) || '';
   const isRunning = (data.isRunning as boolean) || false;
+  const runStatus = (data.runStatus as NodeRunStatus) || 'idle';
   const error = (data.error as string) || '';
 
   const updateNodeData = useStore((state) => state.updateNodeData);
@@ -59,7 +61,7 @@ const CropImageNode = memo(({ id, data, selected }: NodeProps<CropImageNodeType>
   }, [id, updateNodeData]);
 
   return (
-    <BaseNode id={id} title={label} icon={<Crop className="w-3 h-3" />} selected={selected} isRunning={isRunning} onRunNode={handleRunNode}>
+    <BaseNode title={label} icon={<Crop className="w-3 h-3" />} selected={selected} isRunning={isRunning} runStatus={runStatus} onRunNode={handleRunNode}>
       {/* Input Handles - Left side */}
       <Handle type="target" position={Position.Left} id="image_url" className="!bg-wy-500 !w-2 !h-2 !border-0" style={{ top: '15%' }} />
       <Handle type="target" position={Position.Left} id="x_percent" className="!bg-wy-500 !w-2 !h-2 !border-0" style={{ top: '30%' }} />

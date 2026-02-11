@@ -3,7 +3,7 @@
 import { memo, useRef, useState, useCallback } from 'react';
 import { Handle, Position, NodeProps, Node } from '@xyflow/react';
 import { Video, Upload, X, Loader2 } from 'lucide-react';
-import BaseNode from './BaseNode';
+import BaseNode, { type NodeRunStatus } from './BaseNode';
 import { useStore } from '@/hooks/useStore';
 
 interface UploadVideoNodeData extends Record<string, unknown> {
@@ -11,6 +11,7 @@ interface UploadVideoNodeData extends Record<string, unknown> {
   fileName?: string;
   label?: string;
   isRunning?: boolean;
+  runStatus?: NodeRunStatus;
   isUploading?: boolean;
 }
 
@@ -27,6 +28,7 @@ const UploadVideoNode = memo(({ id, data, selected }: NodeProps<UploadVideoNodeT
   const fileName = (data.fileName as string) || '';
   const label = (data.label as string) || 'Upload Video';
   const isRunning = (data.isRunning as boolean) || false;
+  const runStatus = (data.runStatus as NodeRunStatus) || 'idle';
   const isUploading = (data.isUploading as boolean) || false;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -89,7 +91,7 @@ const UploadVideoNode = memo(({ id, data, selected }: NodeProps<UploadVideoNodeT
   }, []);
 
   return (
-    <BaseNode id={id} title={label} icon={<Video className="w-3 h-3" />} selected={selected} isRunning={isRunning} onRunNode={handleRunNode}>
+    <BaseNode title={label} icon={<Video className="w-3 h-3" />} selected={selected} isRunning={isRunning} runStatus={runStatus} onRunNode={handleRunNode}>
       {/* Output Handle - Right side only */}
       <Handle type="source" position={Position.Right} id="output" className="!bg-wy-500 !w-2 !h-2 !border-0" />
 

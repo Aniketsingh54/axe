@@ -3,7 +3,7 @@
 import { memo, useCallback } from 'react';
 import { Handle, Position, NodeProps, Node, useHandleConnections } from '@xyflow/react';
 import { Film, Loader2 } from 'lucide-react';
-import BaseNode from './BaseNode';
+import BaseNode, { type NodeRunStatus } from './BaseNode';
 import { useStore } from '@/hooks/useStore';
 
 interface ExtractFrameNodeData extends Record<string, unknown> {
@@ -11,6 +11,7 @@ interface ExtractFrameNodeData extends Record<string, unknown> {
   label?: string;
   output?: string;
   isRunning?: boolean;
+  runStatus?: NodeRunStatus;
   error?: string;
 }
 
@@ -30,6 +31,7 @@ const ExtractFrameNode = memo(({ id, data, selected }: NodeProps<ExtractFrameNod
   const label = (data.label as string) || 'Extract Frame';
   const output = (data.output as string) || '';
   const isRunning = (data.isRunning as boolean) || false;
+  const runStatus = (data.runStatus as NodeRunStatus) || 'idle';
   const error = (data.error as string) || '';
 
   const updateNodeData = useStore((state) => state.updateNodeData);
@@ -57,7 +59,7 @@ const ExtractFrameNode = memo(({ id, data, selected }: NodeProps<ExtractFrameNod
   }, [id, updateNodeData]);
 
   return (
-    <BaseNode id={id} title={label} icon={<Film className="w-3 h-3" />} selected={selected} isRunning={isRunning} onRunNode={handleRunNode}>
+    <BaseNode title={label} icon={<Film className="w-3 h-3" />} selected={selected} isRunning={isRunning} runStatus={runStatus} onRunNode={handleRunNode}>
       {/* Input Handles - Left side */}
       <Handle
         type="target"

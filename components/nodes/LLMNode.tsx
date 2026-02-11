@@ -3,7 +3,7 @@
 import { memo, useCallback } from 'react';
 import { Handle, Position, NodeProps, Node, useHandleConnections } from '@xyflow/react';
 import { Sparkles, Loader2 } from 'lucide-react';
-import BaseNode from './BaseNode';
+import BaseNode, { type NodeRunStatus } from './BaseNode';
 import { useStore } from '@/hooks/useStore';
 
 interface LLMNodeData extends Record<string, unknown> {
@@ -13,6 +13,7 @@ interface LLMNodeData extends Record<string, unknown> {
   userMessage?: string;
   output?: string;
   isRunning?: boolean;
+  runStatus?: NodeRunStatus;
   error?: string;
 }
 
@@ -30,6 +31,7 @@ const LLMNode = memo(({ id, data, selected }: NodeProps<LLMNodeType>) => {
   const userMessage = (data.userMessage as string) || '';
   const output = (data.output as string) || '';
   const isRunning = (data.isRunning as boolean) || false;
+  const runStatus = (data.runStatus as NodeRunStatus) || 'idle';
   const error = (data.error as string) || '';
 
   const updateNodeData = useStore((state) => state.updateNodeData);
@@ -61,7 +63,7 @@ const LLMNode = memo(({ id, data, selected }: NodeProps<LLMNodeType>) => {
   }, [id, updateNodeData]);
 
   return (
-    <BaseNode id={id} title={label} icon={<Sparkles className="w-3 h-3" />} selected={selected} isRunning={isRunning} onRunNode={handleRunNode}>
+    <BaseNode title={label} icon={<Sparkles className="w-3 h-3" />} selected={selected} isRunning={isRunning} runStatus={runStatus} onRunNode={handleRunNode}>
       {/* Input Handles - Left side */}
       <Handle
         type="target"

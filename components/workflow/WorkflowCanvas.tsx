@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -19,6 +19,7 @@ import { useStore } from '@/hooks/useStore';
 import { nodeTypes } from './config';
 import { Play, Save, Loader2, Download, Upload, Undo2, Redo2, FilePlus, PlayCircle } from 'lucide-react';
 import { isValidConnection as validateConnection } from '@/lib/graph';
+import { type NodeRunStatus } from '@/components/nodes/BaseNode';
 
 import '@xyflow/react/dist/style.css';
 
@@ -30,6 +31,7 @@ const getCleanNodes = (nodes: Node[]) => nodes.map(node => {
   delete data.output;
   delete data.error;
   delete data.isRunning;
+  delete data.runStatus;
 
   // Strip base64 data URLs (they're too large for Vercel's serverless functions)
   // Keep only external URLs (http/https)
@@ -47,6 +49,81 @@ const getCleanNodes = (nodes: Node[]) => nodes.map(node => {
     data,
   };
 });
+
+type ExecutionNodeResult = {
+  nodeId: string;
+  status: 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED' | 'SKIPPED';
+  outputs?: { output?: unknown };
+  error?: string;
+};
+
+const DAG_ANIMATION_TICK_MS = 900;
+
+const getExecutionScopeNodeIds = (targetNodeIds: string[] | undefined, edges: Edge[]): Set<string> => {
+  if (!targetNodeIds || targetNodeIds.length === 0) {
+    return new Set<string>();
+  }
+
+  const include = new Set<string>(targetNodeIds);
+  const queue = [...targetNodeIds];
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    for (const edge of edges) {
+      if (edge.target === current && !include.has(edge.source)) {
+        include.add(edge.source);
+        queue.push(edge.source);
+      }
+    }
+  }
+
+  return include;
+};
+
+const buildExecutionPhases = (nodes: Node[], edges: Edge[], scopeNodeIds?: Set<string>): string[][] => {
+  const includedIds = scopeNodeIds && scopeNodeIds.size > 0
+    ? new Set([...scopeNodeIds].filter((id) => nodes.some((node) => node.id === id)))
+    : new Set(nodes.map((node) => node.id));
+
+  const inDegree = new Map<string, number>();
+  const adjacency = new Map<string, string[]>();
+
+  for (const nodeId of includedIds) {
+    inDegree.set(nodeId, 0);
+    adjacency.set(nodeId, []);
+  }
+
+  for (const edge of edges) {
+    if (!includedIds.has(edge.source) || !includedIds.has(edge.target)) continue;
+    adjacency.get(edge.source)?.push(edge.target);
+    inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
+  }
+
+  const phases: string[][] = [];
+  const remaining = new Set(includedIds);
+  let current = [...includedIds].filter((id) => (inDegree.get(id) || 0) === 0);
+
+  while (current.length > 0) {
+    phases.push(current);
+    current.forEach((id) => remaining.delete(id));
+
+    const nextSet = new Set<string>();
+    for (const nodeId of current) {
+      for (const childId of adjacency.get(nodeId) || []) {
+        const nextDegree = (inDegree.get(childId) || 0) - 1;
+        inDegree.set(childId, nextDegree);
+        if (nextDegree === 0) nextSet.add(childId);
+      }
+    }
+    current = [...nextSet];
+  }
+
+  if (remaining.size > 0) {
+    phases.push([...remaining]);
+  }
+
+  return phases;
+};
 
 export default function WorkflowCanvas() {
   const {
@@ -76,11 +153,104 @@ export default function WorkflowCanvas() {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const phaseTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const visualizedScopeRef = useRef<Set<string>>(new Set());
+
+  const stopPhaseAnimation = useCallback(() => {
+    if (phaseTimerRef.current) {
+      clearInterval(phaseTimerRef.current);
+      phaseTimerRef.current = null;
+    }
+  }, []);
+
+  const startPhaseAnimation = useCallback((targetNodeIds?: string[]) => {
+    stopPhaseAnimation();
+
+    const scope = getExecutionScopeNodeIds(targetNodeIds, edges);
+    const scopeIds = scope.size > 0 ? [...scope] : nodes.map((node) => node.id);
+    visualizedScopeRef.current = new Set(scopeIds);
+
+    // Initialize selected execution scope as queued.
+    scopeIds.forEach((nodeId) => {
+      updateNodeData(nodeId, {
+        isRunning: false,
+        runStatus: 'queued' as NodeRunStatus,
+        error: undefined,
+        output: undefined,
+      });
+    });
+
+    const phases = buildExecutionPhases(nodes, edges, scope.size > 0 ? scope : undefined);
+    if (phases.length === 0) return;
+
+    const activatePhase = (phaseIndex: number) => {
+      if (phaseIndex > 0 && phases[phaseIndex - 1]) {
+        phases[phaseIndex - 1].forEach((nodeId) => {
+          updateNodeData(nodeId, {
+            isRunning: false,
+            runStatus: 'success' as NodeRunStatus,
+          });
+        });
+      }
+
+      if (phases[phaseIndex]) {
+        phases[phaseIndex].forEach((nodeId) => {
+          updateNodeData(nodeId, {
+            isRunning: true,
+            runStatus: 'running' as NodeRunStatus,
+          });
+        });
+      }
+    };
+
+    let phaseIndex = 0;
+    activatePhase(phaseIndex);
+
+    phaseTimerRef.current = setInterval(() => {
+      phaseIndex += 1;
+      if (phaseIndex >= phases.length) {
+        stopPhaseAnimation();
+        return;
+      }
+      activatePhase(phaseIndex);
+    }, DAG_ANIMATION_TICK_MS);
+  }, [edges, nodes, stopPhaseAnimation, updateNodeData]);
+
+  const applyExecutionResultsToNodes = useCallback((results: ExecutionNodeResult[] | undefined) => {
+    if (!results || results.length === 0) return;
+
+    const resultNodeIds = new Set<string>();
+    results.forEach((nodeResult) => {
+      resultNodeIds.add(nodeResult.nodeId);
+      const status: NodeRunStatus =
+        nodeResult.status === 'SUCCESS' ? 'success'
+          : nodeResult.status === 'FAILED' ? 'failed'
+            : 'idle';
+
+      updateNodeData(nodeResult.nodeId, {
+        isRunning: false,
+        runStatus: status,
+        output: nodeResult.outputs?.output,
+        error: nodeResult.error,
+      });
+    });
+
+    // Any visualized node not returned by API is marked idle.
+    visualizedScopeRef.current.forEach((nodeId) => {
+      if (!resultNodeIds.has(nodeId)) {
+        updateNodeData(nodeId, { isRunning: false, runStatus: 'idle' as NodeRunStatus });
+      }
+    });
+  }, [updateNodeData]);
 
   // Track selected nodes
   const onSelectionChange: OnSelectionChangeFunc = useCallback(({ nodes: selectedNodes }) => {
     setSelectedNodeIds(selectedNodes.map(n => n.id));
   }, []);
+
+  useEffect(() => {
+    return () => stopPhaseAnimation();
+  }, [stopPhaseAnimation]);
 
   // Handle single node execution when pendingNodeRun is set
   useEffect(() => {
@@ -254,7 +424,7 @@ export default function WorkflowCanvas() {
     const nodeName = targetNode?.type || 'Node';
 
     addExecutionLog({ level: 'info', message: `Running single node: ${nodeName} (with dependencies)...` });
-    updateNodeData(targetNodeId, { isRunning: true, error: undefined, output: undefined });
+    startPhaseAnimation([targetNodeId]);
 
     try {
       const response = await fetch('/api/run-workflow', {
@@ -285,7 +455,7 @@ export default function WorkflowCanvas() {
       refreshHistory();
 
       if (result.results) {
-        result.results.forEach((nodeResult: any) => {
+        result.results.forEach((nodeResult: ExecutionNodeResult) => {
           const nodeInfo = nodes.find(n => n.id === nodeResult.nodeId);
           const name = nodeInfo?.type || nodeResult.nodeId;
 
@@ -305,12 +475,9 @@ export default function WorkflowCanvas() {
             });
           }
 
-          updateNodeData(nodeResult.nodeId, {
-            isRunning: false,
-            output: nodeResult.outputs?.output,
-            error: nodeResult.error,
-          });
         });
+        stopPhaseAnimation();
+        applyExecutionResultsToNodes(result.results);
       }
 
       if (result.status === 'SUCCESS') {
@@ -322,8 +489,12 @@ export default function WorkflowCanvas() {
     } catch (error: any) {
       console.error('Error running single node:', error);
       addExecutionLog({ level: 'error', message: `Execution failed: ${error.message}` });
-      updateNodeData(targetNodeId, { isRunning: false, error: error.message });
+      stopPhaseAnimation();
+      visualizedScopeRef.current.forEach((nodeId) => {
+        updateNodeData(nodeId, { isRunning: false, runStatus: 'failed' as NodeRunStatus, error: error.message });
+      });
     } finally {
+      stopPhaseAnimation();
       setIsRunning(false);
       setGlobalIsRunning(false);
     }
@@ -341,10 +512,7 @@ export default function WorkflowCanvas() {
     clearExecutionLogs();
 
     addExecutionLog({ level: 'info', message: `Running ${selectedNodeIds.length} selected node(s) with dependencies...` });
-
-    selectedNodeIds.forEach(nodeId => {
-      updateNodeData(nodeId, { isRunning: true, error: undefined, output: undefined });
-    });
+    startPhaseAnimation(selectedNodeIds);
 
     try {
       const response = await fetch('/api/run-workflow', {
@@ -375,7 +543,7 @@ export default function WorkflowCanvas() {
       refreshHistory();
 
       if (result.results) {
-        result.results.forEach((nodeResult: any) => {
+        result.results.forEach((nodeResult: ExecutionNodeResult) => {
           const nodeInfo = nodes.find(n => n.id === nodeResult.nodeId);
           const name = nodeInfo?.type || nodeResult.nodeId;
 
@@ -395,12 +563,9 @@ export default function WorkflowCanvas() {
             });
           }
 
-          updateNodeData(nodeResult.nodeId, {
-            isRunning: false,
-            output: nodeResult.outputs?.output,
-            error: nodeResult.error,
-          });
         });
+        stopPhaseAnimation();
+        applyExecutionResultsToNodes(result.results);
       }
 
       if (result.status === 'SUCCESS') {
@@ -412,10 +577,12 @@ export default function WorkflowCanvas() {
     } catch (error: any) {
       console.error('Error running selected nodes:', error);
       addExecutionLog({ level: 'error', message: `Execution failed: ${error.message}` });
-      selectedNodeIds.forEach(nodeId => {
-        updateNodeData(nodeId, { isRunning: false, error: error.message });
+      stopPhaseAnimation();
+      visualizedScopeRef.current.forEach((nodeId) => {
+        updateNodeData(nodeId, { isRunning: false, runStatus: 'failed' as NodeRunStatus, error: error.message });
       });
     } finally {
+      stopPhaseAnimation();
       setIsRunning(false);
       setGlobalIsRunning(false);
     }
@@ -432,10 +599,7 @@ export default function WorkflowCanvas() {
     clearExecutionLogs();
 
     addExecutionLog({ level: 'info', message: `Starting workflow execution with ${nodes.length} nodes...` });
-
-    nodes.forEach(node => {
-      updateNodeData(node.id, { isRunning: true, error: undefined, output: undefined });
-    });
+    startPhaseAnimation();
 
     try {
       addExecutionLog({ level: 'info', message: 'Sending workflow to execution engine...' });
@@ -463,7 +627,7 @@ export default function WorkflowCanvas() {
       refreshHistory();
 
       if (result.results) {
-        result.results.forEach((nodeResult: any) => {
+        result.results.forEach((nodeResult: ExecutionNodeResult) => {
           const nodeInfo = nodes.find(n => n.id === nodeResult.nodeId);
           const nodeName = nodeInfo?.type || nodeResult.nodeId;
 
@@ -483,12 +647,9 @@ export default function WorkflowCanvas() {
             });
           }
 
-          updateNodeData(nodeResult.nodeId, {
-            isRunning: false,
-            output: nodeResult.outputs?.output,
-            error: nodeResult.error,
-          });
         });
+        stopPhaseAnimation();
+        applyExecutionResultsToNodes(result.results);
       }
 
       if (result.status === 'SUCCESS') {
@@ -501,10 +662,12 @@ export default function WorkflowCanvas() {
       console.error('Error running workflow:', error);
       addExecutionLog({ level: 'error', message: `Execution failed: ${error.message}` });
       alert(`Execution failed: ${error.message}`);
-      nodes.forEach(node => {
-        updateNodeData(node.id, { isRunning: false });
+      stopPhaseAnimation();
+      visualizedScopeRef.current.forEach((nodeId) => {
+        updateNodeData(nodeId, { isRunning: false, runStatus: 'failed' as NodeRunStatus, error: error.message });
       });
     } finally {
+      stopPhaseAnimation();
       setIsRunning(false);
       setGlobalIsRunning(false);
     }

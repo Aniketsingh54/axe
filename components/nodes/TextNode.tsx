@@ -3,12 +3,13 @@
 import { memo, useCallback } from 'react';
 import { Handle, Position, NodeProps, Node } from '@xyflow/react';
 import { Type } from 'lucide-react';
-import BaseNode from './BaseNode';
+import BaseNode, { type NodeRunStatus } from './BaseNode';
 import { useStore } from '@/hooks/useStore';
 
 interface TextNodeData extends Record<string, unknown> {
   text?: string;
   isRunning?: boolean;
+  runStatus?: NodeRunStatus;
 }
 
 type TextNodeType = Node<TextNodeData>;
@@ -21,6 +22,7 @@ type TextNodeType = Node<TextNodeData>;
 const TextNode = memo(({ id, data, selected }: NodeProps<TextNodeType>) => {
   const text = (data.text as string) || '';
   const isRunning = (data.isRunning as boolean) || false;
+  const runStatus = (data.runStatus as NodeRunStatus) || 'idle';
   const updateNodeData = useStore((state) => state.updateNodeData);
   const setPendingNodeRun = useStore((state) => state.setPendingNodeRun);
 
@@ -33,7 +35,7 @@ const TextNode = memo(({ id, data, selected }: NodeProps<TextNodeType>) => {
   }, [id, setPendingNodeRun]);
 
   return (
-    <BaseNode id={id} title="Text" icon={<Type className="w-3 h-3" />} selected={selected} isRunning={isRunning} onRunNode={handleRunNode}>
+    <BaseNode title="Text" icon={<Type className="w-3 h-3" />} selected={selected} isRunning={isRunning} runStatus={runStatus} onRunNode={handleRunNode}>
       {/* Output Handle - Right side only */}
       <Handle type="source" position={Position.Right} id="output" className="!bg-wy-500 !w-2 !h-2 !border-0" />
 
