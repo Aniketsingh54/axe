@@ -35,6 +35,7 @@ const CropImageNode = memo(({ id, data, selected }: NodeProps<CropImageNodeType>
   const isRunning = (data.isRunning as boolean) || false;
   const runStatus = (data.runStatus as NodeRunStatus) || 'idle';
   const error = (data.error as string) || '';
+  const workflowIsRunning = useStore((state) => state.isRunning);
 
   const updateNodeData = useStore((state) => state.updateNodeData);
   const setPendingNodeRun = useStore((state) => state.setPendingNodeRun);
@@ -61,7 +62,7 @@ const CropImageNode = memo(({ id, data, selected }: NodeProps<CropImageNodeType>
   }, [id, updateNodeData]);
 
   return (
-    <BaseNode title={label} icon={<Crop className="w-3 h-3" />} selected={selected} isRunning={isRunning} runStatus={runStatus} onRunNode={handleRunNode}>
+    <BaseNode title={label} icon={<Crop className="w-3 h-3" />} selected={selected} isRunning={isRunning} runStatus={runStatus} onRunNode={handleRunNode} disableRun={workflowIsRunning && !isRunning}>
       {/* Input Handles - Left side */}
       <Handle type="target" position={Position.Left} id="image_url" className="!bg-wy-500 !w-2 !h-2 !border-0" style={{ top: '15%' }} />
       <Handle type="target" position={Position.Left} id="x_percent" className="!bg-wy-500 !w-2 !h-2 !border-0" style={{ top: '30%' }} />

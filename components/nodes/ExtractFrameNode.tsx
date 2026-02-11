@@ -33,6 +33,7 @@ const ExtractFrameNode = memo(({ id, data, selected }: NodeProps<ExtractFrameNod
   const isRunning = (data.isRunning as boolean) || false;
   const runStatus = (data.runStatus as NodeRunStatus) || 'idle';
   const error = (data.error as string) || '';
+  const workflowIsRunning = useStore((state) => state.isRunning);
 
   const updateNodeData = useStore((state) => state.updateNodeData);
   const setPendingNodeRun = useStore((state) => state.setPendingNodeRun);
@@ -59,7 +60,7 @@ const ExtractFrameNode = memo(({ id, data, selected }: NodeProps<ExtractFrameNod
   }, [id, updateNodeData]);
 
   return (
-    <BaseNode title={label} icon={<Film className="w-3 h-3" />} selected={selected} isRunning={isRunning} runStatus={runStatus} onRunNode={handleRunNode}>
+    <BaseNode title={label} icon={<Film className="w-3 h-3" />} selected={selected} isRunning={isRunning} runStatus={runStatus} onRunNode={handleRunNode} disableRun={workflowIsRunning && !isRunning}>
       {/* Input Handles - Left side */}
       <Handle
         type="target"

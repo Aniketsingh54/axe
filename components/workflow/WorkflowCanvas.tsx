@@ -126,6 +126,15 @@ const getExecutionScopeNodeIds = (targetNodeIds: string[] | undefined, edges: Ed
   return include;
 };
 
+const getScopeRoots = (scopeNodeIds: Set<string>, edges: Edge[]): string[] => {
+  const roots: string[] = [];
+  scopeNodeIds.forEach((nodeId) => {
+    const hasIncomingFromScope = edges.some((edge) => edge.target === nodeId && scopeNodeIds.has(edge.source));
+    if (!hasIncomingFromScope) roots.push(nodeId);
+  });
+  return roots;
+};
+
 export default function WorkflowCanvas() {
   const {
     nodes,
@@ -161,13 +170,26 @@ export default function WorkflowCanvas() {
     const scopeIds = scope.size > 0 ? [...scope] : nodes.map((node) => node.id);
     visualizedScopeRef.current = new Set(scopeIds);
 
-    // Start as queued; actual RUNNING/SUCCESS/FAILED come from backend polling.
+    // Reset scope status; actual RUNNING/SUCCESS/FAILED come from backend polling.
     scopeIds.forEach((nodeId) => {
       updateNodeData(nodeId, {
         isRunning: false,
-        runStatus: 'queued' as NodeRunStatus,
+        runStatus: 'idle' as NodeRunStatus,
         error: undefined,
         output: undefined,
+      });
+    });
+
+    // Queue only roots of current run scope to avoid "everything queued" spam.
+    const queueNodeIds = targetNodeIds && targetNodeIds.length > 0
+      ? targetNodeIds
+      : getScopeRoots(new Set(scopeIds), edges);
+
+    queueNodeIds.forEach((nodeId) => {
+      if (!visualizedScopeRef.current.has(nodeId)) return;
+      updateNodeData(nodeId, {
+        isRunning: false,
+        runStatus: 'queued' as NodeRunStatus,
       });
     });
   }, [edges, nodes, updateNodeData]);

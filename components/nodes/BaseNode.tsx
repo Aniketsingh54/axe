@@ -12,6 +12,7 @@ interface BaseNodeProps {
   isRunning?: boolean;
   runStatus?: NodeRunStatus;
   onRunNode?: () => void;
+  disableRun?: boolean;
 }
 
 /**
@@ -27,7 +28,8 @@ const BaseNode = memo(({
   selected = false,
   isRunning = false,
   runStatus = 'idle',
-  onRunNode
+  onRunNode,
+  disableRun = false,
 }: BaseNodeProps) => {
   const effectiveStatus: NodeRunStatus = isRunning ? 'running' : runStatus;
 
@@ -49,7 +51,7 @@ const BaseNode = memo(({
         {effectiveStatus === 'success' && <span className="text-[8px] text-emerald-400">Done</span>}
         {effectiveStatus === 'failed' && <span className="text-[8px] text-red-400">Failed</span>}
         {effectiveStatus === 'queued' && <span className="text-[8px] text-amber-400">Queued</span>}
-        {effectiveStatus !== 'running' && onRunNode && (
+        {effectiveStatus !== 'running' && !disableRun && onRunNode && (
           <button
             onClick={(e) => {
               e.stopPropagation();

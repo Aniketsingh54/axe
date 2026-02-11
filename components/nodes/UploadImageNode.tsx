@@ -31,6 +31,7 @@ const UploadImageNode = memo(({ id, data, selected }: NodeProps<UploadImageNodeT
   const isRunning = (data.isRunning as boolean) || false;
   const runStatus = (data.runStatus as NodeRunStatus) || 'idle';
   const isUploading = (data.isUploading as boolean) || false;
+  const workflowIsRunning = useStore((state) => state.isRunning);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -88,7 +89,7 @@ const UploadImageNode = memo(({ id, data, selected }: NodeProps<UploadImageNodeT
   }, []);
 
   return (
-    <BaseNode title={label} icon={<Image className="w-3 h-3" />} selected={selected} isRunning={isRunning} runStatus={runStatus} onRunNode={handleRunNode}>
+    <BaseNode title={label} icon={<Image className="w-3 h-3" />} selected={selected} isRunning={isRunning} runStatus={runStatus} onRunNode={handleRunNode} disableRun={workflowIsRunning && !isRunning}>
       {/* Output Handle - Right side only */}
       <Handle type="source" position={Position.Right} id="output" className="!bg-wy-500 !w-2 !h-2 !border-0" />
 

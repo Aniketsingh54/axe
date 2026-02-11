@@ -23,6 +23,7 @@ const TextNode = memo(({ id, data, selected }: NodeProps<TextNodeType>) => {
   const text = (data.text as string) || '';
   const isRunning = (data.isRunning as boolean) || false;
   const runStatus = (data.runStatus as NodeRunStatus) || 'idle';
+  const workflowIsRunning = useStore((state) => state.isRunning);
   const updateNodeData = useStore((state) => state.updateNodeData);
   const setPendingNodeRun = useStore((state) => state.setPendingNodeRun);
 
@@ -35,7 +36,7 @@ const TextNode = memo(({ id, data, selected }: NodeProps<TextNodeType>) => {
   }, [id, setPendingNodeRun]);
 
   return (
-    <BaseNode title="Text" icon={<Type className="w-3 h-3" />} selected={selected} isRunning={isRunning} runStatus={runStatus} onRunNode={handleRunNode}>
+    <BaseNode title="Text" icon={<Type className="w-3 h-3" />} selected={selected} isRunning={isRunning} runStatus={runStatus} onRunNode={handleRunNode} disableRun={workflowIsRunning && !isRunning}>
       {/* Output Handle - Right side only */}
       <Handle type="source" position={Position.Right} id="output" className="!bg-wy-500 !w-2 !h-2 !border-0" />
 
