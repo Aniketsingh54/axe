@@ -29,14 +29,14 @@ const DraggableNodeButton = ({ icon, label, nodeType }: DraggableNodeButtonProps
 
   return (
     <div
-      className="flex items-center gap-3 p-3 rounded-lg border border-dark-border bg-dark-bg hover:bg-dark-muted cursor-grab transition-colors"
+      className="group min-h-[88px] flex flex-col items-center justify-center gap-2 px-2 py-3 rounded-md border border-dark-border bg-[#232632] hover:border-white/30 hover:bg-[#2a2e3a] cursor-grab transition-colors"
       draggable
       onDragStart={(event) => onDragStart(event, nodeType)}
     >
-      <div className="p-1.5 rounded-md bg-wy-600/20 text-wy-500">
+      <div className="p-1.5 rounded-md text-white/80 group-hover:text-white">
         {icon}
       </div>
-      <span className="text-sm font-medium text-dark-text">{label}</span>
+      <span className="text-[12px] font-medium text-center leading-snug text-white/88">{label}</span>
     </div>
   );
 };
@@ -52,48 +52,51 @@ export default function NodePalette() {
   };
 
   return (
-    <div className="p-4">
-      <h2 className="text-lg font-semibold text-dark-text mb-4">Quick Access</h2>
+    <div className="px-3 py-3 overflow-y-auto h-full">
+      <div className="mb-4">
+        <div className="h-8 rounded-md border border-dark-border bg-[#1a1d25] px-2.5 text-[12px] text-white/60 flex items-center">
+          Search
+        </div>
+      </div>
 
-      <div className="space-y-2">
+      <h2 className="text-[26px] font-semibold text-white tracking-tight mb-3">Quick access</h2>
+
+      <div className="grid grid-cols-2 gap-2">
         <DraggableNodeButton
           icon={<Type className="w-4 h-4" />}
-          label="Text Node"
+          label="Prompt"
           nodeType="text"
         />
 
         <DraggableNodeButton
           icon={<Image className="w-4 h-4" />}
-          label="Upload Image"
+          label="Import"
           nodeType="upload-image"
         />
 
         <DraggableNodeButton
           icon={<Video className="w-4 h-4" />}
-          label="Upload Video"
+          label="Export"
           nodeType="upload-video"
         />
 
         <DraggableNodeButton
           icon={
-            <div className="relative">
-              <Sparkles className="w-4 h-4 text-wy-500" />
-              <div className="absolute inset-0 rounded-full bg-wy-500 opacity-20 animate-pulse"></div>
-            </div>
+            <Sparkles className="w-4 h-4 text-[#dfe887]" />
           }
-          label="Run Any LLM"
+          label="Preview"
           nodeType="llm"
         />
 
         <DraggableNodeButton
           icon={<Crop className="w-4 h-4" />}
-          label="Crop Image"
+          label="Crop"
           nodeType="crop-image"
         />
 
         <DraggableNodeButton
           icon={<Film className="w-4 h-4" />}
-          label="Extract Frame"
+          label="Extract"
           nodeType="extract-frame"
         />
       </div>
@@ -101,14 +104,14 @@ export default function NodePalette() {
       <div className="my-4">
         <button
           onClick={handleLoadSample}
-          className="w-full flex items-center justify-center gap-2 p-3 rounded-lg border border-wy-600/50 bg-wy-600/10 hover:bg-wy-600/20 text-wy-400 transition-colors"
+          className="w-full flex items-center justify-center gap-2 p-2.5 rounded-md border border-dark-border bg-[#232632] hover:bg-[#2a2e3a] text-white/90 transition-colors text-[12px]"
         >
           <FileDown className="w-4 h-4" />
-          <span className="text-sm font-medium">Load Sample Workflow</span>
+          <span className="font-medium">Load Sample Workflow</span>
         </button>
       </div>
 
-      <div className="my-6 border-t border-dark-border" />
+      <div className="my-4 border-t border-dark-border/80" />
 
       <WorkflowList />
     </div>

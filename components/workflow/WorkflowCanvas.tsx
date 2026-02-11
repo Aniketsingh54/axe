@@ -706,12 +706,12 @@ export default function WorkflowCanvas() {
   return (
     <div className="relative h-full">
       {/* Action Buttons - Top Right */}
-      <div className="absolute top-4 right-4 z-10 flex gap-2">
+      <div className="absolute top-4 right-4 z-10 flex gap-2 items-center">
         {/* Undo/Redo */}
         <button
           onClick={undo}
           disabled={!canUndo()}
-          className="flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium transition-colors bg-dark-bg border border-dark-border text-dark-text hover:bg-dark-border disabled:opacity-30 disabled:cursor-not-allowed"
+          className="h-9 w-9 grid place-items-center rounded-md text-sm transition-colors bg-[#1f222a]/95 border border-[#343846] text-white/80 hover:bg-[#2a2e39] disabled:opacity-30 disabled:cursor-not-allowed"
           title="Undo (Ctrl+Z)"
         >
           <Undo2 className="w-4 h-4" />
@@ -719,7 +719,7 @@ export default function WorkflowCanvas() {
         <button
           onClick={redo}
           disabled={!canRedo()}
-          className="flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium transition-colors bg-dark-bg border border-dark-border text-dark-text hover:bg-dark-border disabled:opacity-30 disabled:cursor-not-allowed"
+          className="h-9 w-9 grid place-items-center rounded-md text-sm transition-colors bg-[#1f222a]/95 border border-[#343846] text-white/80 hover:bg-[#2a2e39] disabled:opacity-30 disabled:cursor-not-allowed"
           title="Redo (Ctrl+Shift+Z)"
         >
           <Redo2 className="w-4 h-4" />
@@ -728,7 +728,7 @@ export default function WorkflowCanvas() {
         {/* New Workflow */}
         <button
           onClick={clearWorkflow}
-          className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors bg-dark-bg border border-dark-border text-dark-text hover:bg-dark-border"
+          className="h-9 w-9 grid place-items-center rounded-md text-sm transition-colors bg-[#1f222a]/95 border border-[#343846] text-white/80 hover:bg-[#2a2e39]"
           title="New Workflow"
         >
           <FilePlus className="w-4 h-4" />
@@ -737,7 +737,7 @@ export default function WorkflowCanvas() {
         <button
           onClick={handleSaveWorkflow}
           disabled={isSaving}
-          className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors bg-dark-bg border border-dark-border text-dark-text hover:bg-dark-border"
+          className="h-9 px-3 flex items-center gap-2 rounded-md text-[13px] font-medium transition-colors bg-[#1f222a]/95 border border-[#343846] text-white/90 hover:bg-[#2a2e39]"
         >
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           {isSaving ? 'Saving...' : 'Save'}
@@ -746,9 +746,9 @@ export default function WorkflowCanvas() {
         <button
           onClick={handleRunWorkflow}
           disabled={isRunning || nodes.length === 0}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${isRunning || nodes.length === 0
-            ? 'bg-wy-500/50 text-white/50 cursor-not-allowed'
-            : 'bg-wy-500 text-white hover:bg-wy-600'
+          className={`h-9 px-4 flex items-center gap-2 rounded-md text-[13px] font-medium transition-colors ${isRunning || nodes.length === 0
+            ? 'bg-[#5f68a8]/60 text-white/55 cursor-not-allowed'
+            : 'bg-[#7078ff] text-white hover:bg-[#7b84ff]'
             }`}
         >
           {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
@@ -760,9 +760,9 @@ export default function WorkflowCanvas() {
           <button
             onClick={handleRunSelectedNodes}
             disabled={isRunning}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${isRunning
-              ? 'bg-green-500/50 text-white/50 cursor-not-allowed'
-              : 'bg-green-600 text-white hover:bg-green-700'
+            className={`h-9 px-4 flex items-center gap-2 rounded-md text-[13px] font-medium transition-colors ${isRunning
+              ? 'bg-[#2e6f4c]/55 text-white/50 cursor-not-allowed'
+              : 'bg-[#2e8b57] text-white hover:bg-[#339c62]'
               }`}
             title={`Run ${selectedNodeIds.length} selected node(s) with upstream dependencies`}
           >
@@ -775,7 +775,7 @@ export default function WorkflowCanvas() {
         <button
           onClick={handleExportWorkflow}
           disabled={nodes.length === 0}
-          className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors bg-dark-bg border border-dark-border text-dark-text hover:bg-dark-border disabled:opacity-50 disabled:cursor-not-allowed"
+          className="h-9 w-9 grid place-items-center rounded-md text-sm transition-colors bg-[#1f222a]/95 border border-[#343846] text-white/80 hover:bg-[#2a2e39] disabled:opacity-50 disabled:cursor-not-allowed"
           title="Export as JSON"
         >
           <Download className="w-4 h-4" />
@@ -784,7 +784,7 @@ export default function WorkflowCanvas() {
         {/* Import Button */}
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors bg-dark-bg border border-dark-border text-dark-text hover:bg-dark-border"
+          className="h-9 w-9 grid place-items-center rounded-md text-sm transition-colors bg-[#1f222a]/95 border border-[#343846] text-white/80 hover:bg-[#2a2e39]"
           title="Import from JSON"
         >
           <Upload className="w-4 h-4" />
@@ -811,23 +811,24 @@ export default function WorkflowCanvas() {
         nodeTypes={nodeTypes as NodeTypes}
         defaultEdgeOptions={{
           animated: true,
-          style: { stroke: '#8b5cf6', strokeWidth: 2, strokeDasharray: '5,5' },
+          style: { stroke: '#6f78ff', strokeWidth: 1.8, strokeDasharray: '4,4' },
         }}
         fitView
         minZoom={0.1}
         maxZoom={4}
-        className="bg-dark-bg"
+        className="bg-[#060912]"
       >
         <Background
           variant={BackgroundVariant.Dots}
-          gap={20}
-          color="#3a3a3a"
+          gap={14}
+          size={1}
+          color="#253066"
         />
-        <Controls className="bg-dark-surface border-dark-border fill-dark-text" />
+        <Controls className="bg-[#1f222a] border-[#343846] fill-white/85" />
         <MiniMap
-          nodeColor={() => '#6366f1'}
-          maskColor="rgba(0, 0, 0, 0.7)"
-          className="bg-dark-surface border-dark-border"
+          nodeColor={() => '#6f78ff'}
+          maskColor="rgba(6, 9, 18, 0.72)"
+          className="bg-[#1f222a] border-[#343846]"
         />
       </ReactFlow>
     </div>

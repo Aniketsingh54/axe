@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from '@/hooks/useStore';
 import { Loader2, FileText, ChevronRight, Trash2 } from 'lucide-react';
 
@@ -92,15 +92,15 @@ export default function WorkflowList() {
         );
     }
 
-    return (
-        <div className="space-y-4 p-4">
-            <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xs font-semibold text-dark-text-muted uppercase tracking-wider">
+  return (
+        <div className="space-y-3">
+            <div className="flex items-center justify-between mb-1">
+                <h3 className="text-[11px] font-semibold text-white/56 uppercase tracking-[0.12em]">
                     Saved Workflows
                 </h3>
                 <button
                     onClick={() => fetchWorkflows(true)}
-                    className="text-[10px] text-wy-500 hover:text-wy-400"
+                    className="text-[10px] text-white/45 hover:text-white/80"
                 >
                     Refresh
                 </button>
@@ -108,16 +108,16 @@ export default function WorkflowList() {
 
             <div className="space-y-2">
                 {workflows.length === 0 ? (
-                    <div className="text-[11px] text-dark-text-muted italic p-2 border border-dashed border-dark-border rounded">
+                    <div className="text-[11px] text-white/45 italic p-2 border border-dashed border-dark-border rounded-md">
                         No workflows found. Save one to see it here!
                     </div>
                 ) : (
                     workflows.map((workflow) => (
                         <div
                             key={workflow.id}
-                            className={`w-full text-left p-3 rounded-lg border transition-all group relative ${currentWorkflowId === workflow.id
-                                ? 'bg-wy-500/10 border-wy-500 text-wy-500'
-                                : 'bg-dark-surface border-dark-border text-dark-text hover:border-wy-500/50 hover:bg-dark-bg'
+                            className={`w-full text-left p-2.5 rounded-md border transition-all group relative ${currentWorkflowId === workflow.id
+                                ? 'bg-[#2b3150] border-[#95a4ff] text-white'
+                                : 'bg-[#1f2330] border-dark-border text-white/80 hover:border-white/25 hover:bg-[#252a37]'
                                 }`}
                         >
                             <button
@@ -126,13 +126,13 @@ export default function WorkflowList() {
                             >
                                 <div className="flex items-center justify-between gap-3">
                                     <div className="flex items-center gap-3 overflow-hidden">
-                                        <div className={`p-2 rounded-md ${currentWorkflowId === workflow.id ? 'bg-wy-500 text-white' : 'bg-dark-bg text-dark-text-muted'
+                                        <div className={`p-1.5 rounded-md ${currentWorkflowId === workflow.id ? 'bg-[#95a4ff] text-[#0f1220]' : 'bg-[#171a23] text-white/55'
                                             }`}>
-                                            <FileText className="w-4 h-4" />
+                                            <FileText className="w-3.5 h-3.5" />
                                         </div>
                                         <div className="overflow-hidden">
-                                            <div className="text-xs font-medium truncate">{workflow.name}</div>
-                                            <div className="text-[10px] text-dark-text-muted truncate">
+                                            <div className="text-[12px] font-medium truncate">{workflow.name}</div>
+                                            <div className="text-[10px] text-white/45 truncate">
                                                 Last updated: {new Date(workflow.updatedAt).toLocaleDateString()}
                                             </div>
                                         </div>
@@ -146,13 +146,13 @@ export default function WorkflowList() {
                             <button
                                 onClick={(e) => handleDeleteWorkflow(e, workflow.id)}
                                 disabled={deletingId === workflow.id}
-                                className="absolute top-2 right-2 p-1.5 rounded-md bg-red-500/10 text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 transition-all disabled:opacity-50"
+                                className="absolute top-2 right-2 p-1 rounded-md bg-red-500/10 text-red-400 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 transition-all disabled:opacity-50"
                                 title="Delete workflow"
                             >
                                 {deletingId === workflow.id ? (
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    <Loader2 className="w-3 h-3 animate-spin" />
                                 ) : (
-                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <Trash2 className="w-3 h-3" />
                                 )}
                             </button>
                         </div>

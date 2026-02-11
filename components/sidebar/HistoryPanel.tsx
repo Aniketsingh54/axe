@@ -144,18 +144,18 @@ export default function HistoryPanel() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'SUCCESS': return 'border-green-800/50 bg-green-900/10';
-      case 'FAILED': return 'border-red-800/50 bg-red-900/10';
-      case 'RUNNING': return 'border-wy-500/50 bg-wy-500/10';
-      default: return 'border-dark-border bg-dark-bg';
+      case 'SUCCESS': return 'border-green-800/40 bg-[#1d2d24]';
+      case 'FAILED': return 'border-red-800/40 bg-[#2c1e24]';
+      case 'RUNNING': return 'border-[#95a4ff]/50 bg-[#212744]';
+      default: return 'border-dark-border bg-[#191c24]';
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'SUCCESS': return <span className="text-green-400 bg-green-900/30 px-2 py-0.5 rounded text-[10px] font-medium">Success</span>;
-      case 'FAILED': return <span className="text-red-400 bg-red-900/30 px-2 py-0.5 rounded text-[10px] font-medium">Failed</span>;
-      case 'RUNNING': return <span className="text-wy-400 bg-wy-500/30 px-2 py-0.5 rounded text-[10px] font-medium animate-pulse">Running</span>;
+      case 'SUCCESS': return <span className="text-green-300 bg-green-900/30 px-2 py-0.5 rounded text-[10px] font-medium">Success</span>;
+      case 'FAILED': return <span className="text-red-300 bg-red-900/30 px-2 py-0.5 rounded text-[10px] font-medium">Failed</span>;
+      case 'RUNNING': return <span className="text-[#95a4ff] bg-[#95a4ff]/20 px-2 py-0.5 rounded text-[10px] font-medium animate-pulse">Running</span>;
       default: return null;
     }
   };
@@ -165,7 +165,7 @@ export default function HistoryPanel() {
 
   if (!workflowId) {
     return (
-      <div className="p-4 h-full flex flex-col items-center justify-center text-dark-text-muted text-center">
+      <div className="p-4 h-full flex flex-col items-center justify-center text-white/45 text-center">
         <Clock className="w-8 h-8 mb-2 opacity-50" />
         <p className="text-sm">Save your workflow to start tracking history</p>
       </div>
@@ -173,13 +173,13 @@ export default function HistoryPanel() {
   }
 
   return (
-    <div className="p-4 h-full flex flex-col bg-dark-surface border-l border-dark-border">
+    <div className="p-4 h-full flex flex-col bg-[#1c1f27]">
       {/* Runs History Section - TOP */}
       <div className="flex items-center justify-between mb-3 shrink-0">
-        <h2 className="text-sm font-semibold text-dark-text uppercase tracking-wide">Runs History</h2>
+        <h2 className="text-sm font-semibold text-white/88 uppercase tracking-wide">Runs History</h2>
         <button
           onClick={() => fetchHistory(true)}
-          className="p-1.5 rounded-md hover:bg-dark-border transition-colors text-dark-text-muted hover:text-dark-text"
+          className="p-1.5 rounded-md hover:bg-white/10 transition-colors text-white/45 hover:text-white"
           title="Refresh"
         >
           <RotateCcw className="w-3.5 h-3.5" />
@@ -188,7 +188,7 @@ export default function HistoryPanel() {
 
       <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar min-h-[120px]">
         {runs.length === 0 ? (
-          <div className="text-center py-6 text-xs text-dark-text-muted">
+          <div className="text-center py-6 text-xs text-white/45">
             No runs yet. Click "Run Workflow" to start.
           </div>
         ) : (
@@ -205,37 +205,37 @@ export default function HistoryPanel() {
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
                       {getStatusBadge(run.status)}
-                      <span className="text-[10px] text-dark-text-muted flex items-center gap-1">
+                      <span className="text-[10px] text-white/45 flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         {formatDate(run.createdAt)}
                       </span>
                     </div>
                     {expandedRunId === run.id ? (
-                      <ChevronUp className="w-3.5 h-3.5 text-dark-text-muted" />
+                      <ChevronUp className="w-3.5 h-3.5 text-white/45" />
                     ) : (
-                      <ChevronDown className="w-3.5 h-3.5 text-dark-text-muted" />
+                      <ChevronDown className="w-3.5 h-3.5 text-white/45" />
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between text-xs text-dark-text">
+                  <div className="flex items-center justify-between text-xs text-white/90">
                     <span className="font-medium truncate max-w-[120px]">
                       Run #{run.id.slice(0, 8)}
                     </span>
-                    <span className="text-[10px] text-dark-text-muted">{run.triggerType}</span>
+                    <span className="text-[10px] text-white/45">{run.triggerType}</span>
                   </div>
                 </div>
 
                 {/* Expanded Details */}
                 {expandedRunId === run.id && (
                   <div className="p-2.5 pt-0 border-t border-white/5 space-y-1.5">
-                    <div className="text-[10px] font-semibold text-dark-text-muted uppercase tracking-wide mt-1.5 mb-1">
+                    <div className="text-[10px] font-semibold text-white/45 uppercase tracking-wide mt-1.5 mb-1">
                       Node Executions ({run.results?.length || 0} nodes)
                     </div>
                     {run.results && run.results.length > 0 ? (
                       run.results.map((result) => (
-                        <div key={result.id} className="flex flex-col gap-1 p-1.5 rounded bg-dark-bg/50 border border-white/5">
+                        <div key={result.id} className="flex flex-col gap-1 p-1.5 rounded bg-[#161924] border border-white/5">
                           <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-medium text-dark-text flex items-center gap-1">
+                            <span className="text-[10px] font-medium text-white/85 flex items-center gap-1">
                               {result.status === 'SUCCESS' ? (
                                 <CheckCircle className="w-3 h-3 text-green-400" />
                               ) : (
@@ -243,7 +243,7 @@ export default function HistoryPanel() {
                               )}
                               {result.nodeType}
                             </span>
-                            <span className="text-[9px] text-dark-text-muted font-mono">
+                            <span className="text-[9px] text-white/45 font-mono">
                               {calcDuration(result.startedAt, result.endedAt)}
                             </span>
                           </div>
@@ -275,7 +275,7 @@ export default function HistoryPanel() {
             {hasMoreRuns && (
               <button
                 onClick={() => setDisplayLimit(prev => prev + 5)}
-                className="w-full py-2 text-xs text-wy-400 hover:text-wy-300 hover:bg-wy-500/10 rounded-lg border border-dashed border-wy-500/30 transition-colors"
+                className="w-full py-2 text-xs text-white/65 hover:text-white hover:bg-white/5 rounded-lg border border-dashed border-white/20 transition-colors"
               >
                 Load More ({runs.length - displayLimit} remaining)
               </button>
@@ -285,31 +285,31 @@ export default function HistoryPanel() {
       </div>
 
       {/* Execution Logs Section - BOTTOM (Flexible) */}
-      <div className="mt-4 rounded-lg border border-wy-500/30 bg-dark-bg/50 overflow-hidden flex flex-col min-h-[180px] max-h-[50%]">
+      <div className="mt-4 rounded-lg border border-white/10 bg-[#161924] overflow-hidden flex flex-col min-h-[180px] max-h-[50%]">
         <div
-          className="flex items-center justify-between px-3 py-2 bg-wy-500/10 cursor-pointer hover:bg-wy-500/20 transition-colors shrink-0"
+          className="flex items-center justify-between px-3 py-2 bg-white/5 cursor-pointer hover:bg-white/10 transition-colors shrink-0"
           onClick={() => setShowLiveLogs(!showLiveLogs)}
         >
           <div className="flex items-center gap-2">
-            <Terminal className="w-3.5 h-3.5 text-wy-500" />
-            <span className="text-xs font-medium text-wy-400">Execution Logs</span>
+            <Terminal className="w-3.5 h-3.5 text-[#95a4ff]" />
+            <span className="text-xs font-medium text-[#95a4ff]">Execution Logs</span>
             {isRunning && (
-              <span className="w-1.5 h-1.5 bg-wy-500 rounded-full animate-pulse" />
+              <span className="w-1.5 h-1.5 bg-[#95a4ff] rounded-full animate-pulse" />
             )}
-            <span className="text-[10px] text-dark-text-muted">({executionLogs.length})</span>
+            <span className="text-[10px] text-white/45">({executionLogs.length})</span>
           </div>
           <div className="flex items-center gap-1">
             <button
               onClick={(e) => { e.stopPropagation(); clearExecutionLogs(); }}
-              className="p-1 hover:bg-dark-border rounded text-dark-text-muted hover:text-dark-text transition-colors"
+              className="p-1 hover:bg-white/10 rounded text-white/45 hover:text-white transition-colors"
               title="Clear logs"
             >
               <Trash2 className="w-3 h-3" />
             </button>
             {showLiveLogs ? (
-              <ChevronUp className="w-3.5 h-3.5 text-dark-text-muted" />
+              <ChevronUp className="w-3.5 h-3.5 text-white/45" />
             ) : (
-              <ChevronDown className="w-3.5 h-3.5 text-dark-text-muted" />
+              <ChevronDown className="w-3.5 h-3.5 text-white/45" />
             )}
           </div>
         </div>
@@ -320,7 +320,7 @@ export default function HistoryPanel() {
             className="flex-1 overflow-y-auto p-2 space-y-1 font-mono text-[10px]"
           >
             {executionLogs.length === 0 ? (
-              <div className="text-dark-text-muted text-center py-4">
+              <div className="text-white/45 text-center py-4">
                 Run a workflow to see execution logs here.
               </div>
             ) : (
