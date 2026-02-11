@@ -45,27 +45,21 @@ const BaseNode = memo(({
       <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-dark-border bg-dark-muted/30">
         <div className={cn("text-wy-400", isRunning && "animate-spin")}>{icon}</div>
         <span className="text-[11px] font-medium flex-1 truncate">{title}</span>
-        {effectiveStatus === 'running' ? (
-          <span className="text-[8px] text-indigo-400">Running</span>
-        ) : effectiveStatus === 'success' ? (
-          <span className="text-[8px] text-emerald-400">Done</span>
-        ) : effectiveStatus === 'failed' ? (
-          <span className="text-[8px] text-red-400">Failed</span>
-        ) : effectiveStatus === 'queued' ? (
-          <span className="text-[8px] text-amber-400">Queued</span>
-        ) : (
-          onRunNode && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onRunNode();
-              }}
-              className="p-0.5 rounded hover:bg-wy-500/20 text-dark-text-muted hover:text-wy-400 transition-colors"
-              title="Run from here"
-            >
-              <Play className="w-3 h-3 fill-current" />
-            </button>
-          )
+        {effectiveStatus === 'running' && <span className="text-[8px] text-indigo-400">Running</span>}
+        {effectiveStatus === 'success' && <span className="text-[8px] text-emerald-400">Done</span>}
+        {effectiveStatus === 'failed' && <span className="text-[8px] text-red-400">Failed</span>}
+        {effectiveStatus === 'queued' && <span className="text-[8px] text-amber-400">Queued</span>}
+        {effectiveStatus !== 'running' && onRunNode && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onRunNode();
+            }}
+            className="p-0.5 rounded hover:bg-wy-500/20 text-dark-text-muted hover:text-wy-400 transition-colors"
+            title="Run from here"
+          >
+            <Play className="w-3 h-3 fill-current" />
+          </button>
         )}
       </div>
 

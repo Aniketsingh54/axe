@@ -116,9 +116,9 @@ const getExecutionScopeNodeIds = (targetNodeIds: string[] | undefined, edges: Ed
   while (queue.length > 0) {
     const current = queue.shift()!;
     for (const edge of edges) {
-      if (edge.target === current && !include.has(edge.source)) {
-        include.add(edge.source);
-        queue.push(edge.source);
+      if (edge.source === current && !include.has(edge.target)) {
+        include.add(edge.target);
+        queue.push(edge.target);
       }
     }
   }
@@ -425,7 +425,7 @@ export default function WorkflowCanvas() {
     }
   };
 
-  // Single node execution (with dependencies)
+  // Single node execution as selected sub-tree root
   const handleRunSingleNode = async (targetNodeId: string) => {
     if (isRunning) return;
 
@@ -439,7 +439,7 @@ export default function WorkflowCanvas() {
     const targetNode = nodes.find(n => n.id === targetNodeId);
     const nodeName = targetNode?.type || 'Node';
 
-    addExecutionLog({ level: 'info', message: `Running single node: ${nodeName} (with dependencies)...` });
+    addExecutionLog({ level: 'info', message: `Running sub-tree from node: ${nodeName}...` });
     initializeRunVisualState([targetNodeId]);
 
     try {
@@ -491,7 +491,7 @@ export default function WorkflowCanvas() {
     }
   };
 
-  // Run multiple selected nodes
+  // Run multiple selected nodes as sub-tree roots
   const handleRunSelectedNodes = async () => {
     if (isRunning || selectedNodeIds.length === 0) return;
 
@@ -502,7 +502,7 @@ export default function WorkflowCanvas() {
     setGlobalIsRunning(true);
     clearExecutionLogs();
 
-    addExecutionLog({ level: 'info', message: `Running ${selectedNodeIds.length} selected node(s) with dependencies...` });
+    addExecutionLog({ level: 'info', message: `Running ${selectedNodeIds.length} selected sub-tree root node(s)...` });
     initializeRunVisualState(selectedNodeIds);
 
     try {
@@ -734,7 +734,7 @@ export default function WorkflowCanvas() {
               ? 'bg-green-500/50 text-white/50 cursor-not-allowed'
               : 'bg-green-600 text-white hover:bg-green-700'
               }`}
-            title={`Run ${selectedNodeIds.length} selected node(s) with dependencies`}
+            title={`Run ${selectedNodeIds.length} selected node(s) as sub-tree roots`}
           >
             {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
             Run Selected ({selectedNodeIds.length})

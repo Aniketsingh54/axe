@@ -94,27 +94,24 @@ export class WorkflowEngine {
         });
     }
 
-    // Get all upstream nodes (dependencies) for a given node using BFS
-    private getUpstreamNodes(targetNodeId: string): string[] {
-        const upstreamIds = new Set<string>();
-        const queue = [targetNodeId];
-
-        // Always include the target node
-        upstreamIds.add(targetNodeId);
+    // Get all downstream nodes (sub-tree) from one or more root nodes using BFS
+    private getDownstreamNodes(rootNodeIds: string[]): string[] {
+        const included = new Set<string>(rootNodeIds);
+        const queue = [...rootNodeIds];
 
         while (queue.length > 0) {
             const currentId = queue.shift()!;
-            const incomingEdges = this.context.edges.filter(e => e.target === currentId);
+            const outgoingEdges = this.context.edges.filter(e => e.source === currentId);
 
-            for (const edge of incomingEdges) {
-                if (!upstreamIds.has(edge.source)) {
-                    upstreamIds.add(edge.source);
-                    queue.push(edge.source);
+            for (const edge of outgoingEdges) {
+                if (!included.has(edge.target)) {
+                    included.add(edge.target);
+                    queue.push(edge.target);
                 }
             }
         }
 
-        return Array.from(upstreamIds);
+        return Array.from(included);
     }
 
     // Get input values from upstream nodes
@@ -256,7 +253,7 @@ export class WorkflowEngine {
     }
 
     // Execute nodes in dependency order with parallel waves.
-    private async runTopological(targetNodeIds?: string[]): Promise<void> {
+    private async runTopological(): Promise<void> {
         while (true) {
             let madeProgress = false;
             const pendingNodes = this.context.nodes.filter((node) => {
@@ -316,8 +313,8 @@ export class WorkflowEngine {
 
     // Run a single node with all its dependencies
     public async runNode(targetNodeId: string): Promise<any> {
-        // Get all upstream dependencies
-        const nodesToRun = this.getUpstreamNodes(targetNodeId);
+        // Run selected node as sub-tree root (downstream)
+        const nodesToRun = this.getDownstreamNodes([targetNodeId]);
 
         this.context.triggerType = 'SINGLE';
         this.context.targetNodeIds = [targetNodeId];
@@ -336,7 +333,7 @@ export class WorkflowEngine {
         });
 
         try {
-            await this.runTopological(nodesToRun);
+            await this.runTopological();
 
             // Final status check (only for nodes that ran)
             const ranNodes = Array.from(this.context.nodeRuns.values()).filter(r => r.status !== 'SKIPPED');
@@ -436,16 +433,8 @@ export class WorkflowEngine {
 
     // Run multiple selected nodes with their dependencies
     public async runNodes(targetNodeIds: string[]): Promise<any> {
-        // Get all upstream dependencies for all target nodes
-        const allNodesToRun = new Set<string>();
-        for (const nodeId of targetNodeIds) {
-            const upstream = this.getUpstreamNodes(nodeId);
-            for (const id of upstream) {
-                allNodesToRun.add(id);
-            }
-        }
-
-        const nodesToRun = Array.from(allNodesToRun);
+        // Run selected nodes as sub-tree roots (downstream)
+        const nodesToRun = this.getDownstreamNodes(targetNodeIds);
 
         this.context.triggerType = 'PARTIAL';
         this.context.targetNodeIds = targetNodeIds;
@@ -464,7 +453,7 @@ export class WorkflowEngine {
         });
 
         try {
-            await this.runTopological(nodesToRun);
+            await this.runTopological();
 
             // Final status check (only for nodes that ran)
             const ranNodes = Array.from(this.context.nodeRuns.values()).filter(r => r.status !== 'SKIPPED');
