@@ -105,7 +105,11 @@ const extractOutputFromNodeResult = (result: ExecutionNodeResult | PolledNodeRes
   return polled.output;
 };
 
-const getExecutionScopeNodeIds = (targetNodeIds: string[] | undefined, edges: Edge[]): Set<string> => {
+const getExecutionScopeNodeIds = (
+  targetNodeIds: string[] | undefined,
+  edges: Edge[],
+  direction: 'UPSTREAM' | 'DOWNSTREAM'
+): Set<string> => {
   if (!targetNodeIds || targetNodeIds.length === 0) {
     return new Set<string>();
   }
@@ -116,9 +120,13 @@ const getExecutionScopeNodeIds = (targetNodeIds: string[] | undefined, edges: Ed
   while (queue.length > 0) {
     const current = queue.shift()!;
     for (const edge of edges) {
-      if (edge.source === current && !include.has(edge.target)) {
+      if (direction === 'DOWNSTREAM' && edge.source === current && !include.has(edge.target)) {
         include.add(edge.target);
         queue.push(edge.target);
+      }
+      if (direction === 'UPSTREAM' && edge.target === current && !include.has(edge.source)) {
+        include.add(edge.source);
+        queue.push(edge.source);
       }
     }
   }
@@ -165,8 +173,8 @@ export default function WorkflowCanvas() {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const visualizedScopeRef = useRef<Set<string>>(new Set());
 
-  const initializeRunVisualState = useCallback((targetNodeIds?: string[]) => {
-    const scope = getExecutionScopeNodeIds(targetNodeIds, edges);
+  const initializeRunVisualState = useCallback((targetNodeIds?: string[], direction: 'UPSTREAM' | 'DOWNSTREAM' = 'DOWNSTREAM') => {
+    const scope = getExecutionScopeNodeIds(targetNodeIds, edges, direction);
     const scopeIds = scope.size > 0 ? [...scope] : nodes.map((node) => node.id);
     visualizedScopeRef.current = new Set(scopeIds);
 
@@ -461,8 +469,8 @@ export default function WorkflowCanvas() {
     const targetNode = nodes.find(n => n.id === targetNodeId);
     const nodeName = targetNode?.type || 'Node';
 
-    addExecutionLog({ level: 'info', message: `Running sub-tree from node: ${nodeName}...` });
-    initializeRunVisualState([targetNodeId]);
+    addExecutionLog({ level: 'info', message: `Running downstream sub-tree from node: ${nodeName}...` });
+    initializeRunVisualState([targetNodeId], 'DOWNSTREAM');
 
     try {
       const response = await fetch('/api/run-workflow', {
@@ -524,8 +532,8 @@ export default function WorkflowCanvas() {
     setGlobalIsRunning(true);
     clearExecutionLogs();
 
-    addExecutionLog({ level: 'info', message: `Running ${selectedNodeIds.length} selected sub-tree root node(s)...` });
-    initializeRunVisualState(selectedNodeIds);
+    addExecutionLog({ level: 'info', message: `Running ${selectedNodeIds.length} selected node(s) with upstream dependencies...` });
+    initializeRunVisualState(selectedNodeIds, 'UPSTREAM');
 
     try {
       const response = await fetch('/api/run-workflow', {
@@ -756,7 +764,7 @@ export default function WorkflowCanvas() {
               ? 'bg-green-500/50 text-white/50 cursor-not-allowed'
               : 'bg-green-600 text-white hover:bg-green-700'
               }`}
-            title={`Run ${selectedNodeIds.length} selected node(s) as sub-tree roots`}
+            title={`Run ${selectedNodeIds.length} selected node(s) with upstream dependencies`}
           >
             {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
             Run Selected ({selectedNodeIds.length})

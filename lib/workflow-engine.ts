@@ -114,6 +114,26 @@ export class WorkflowEngine {
         return Array.from(included);
     }
 
+    // Get all upstream nodes (dependencies) for one or more target nodes using BFS
+    private getUpstreamNodes(targetNodeIds: string[]): string[] {
+        const included = new Set<string>(targetNodeIds);
+        const queue = [...targetNodeIds];
+
+        while (queue.length > 0) {
+            const currentId = queue.shift()!;
+            const incomingEdges = this.context.edges.filter(e => e.target === currentId);
+
+            for (const edge of incomingEdges) {
+                if (!included.has(edge.source)) {
+                    included.add(edge.source);
+                    queue.push(edge.source);
+                }
+            }
+        }
+
+        return Array.from(included);
+    }
+
     // Get input values from upstream nodes
     private getInputs(nodeId: string): Record<string, unknown> {
         const inputs: Record<string, unknown> = {};
@@ -433,8 +453,8 @@ export class WorkflowEngine {
 
     // Run multiple selected nodes with their dependencies
     public async runNodes(targetNodeIds: string[]): Promise<any> {
-        // Run selected nodes as sub-tree roots (downstream)
-        const nodesToRun = this.getDownstreamNodes(targetNodeIds);
+        // Run selected nodes with upstream dependencies
+        const nodesToRun = this.getUpstreamNodes(targetNodeIds);
 
         this.context.triggerType = 'PARTIAL';
         this.context.targetNodeIds = targetNodeIds;
