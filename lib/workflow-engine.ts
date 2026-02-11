@@ -23,6 +23,8 @@ interface WorkflowRunContext {
     targetNodeIds?: string[];
 }
 
+const FAILED_DEP_SKIP_REASON = 'Skipped due to failed dependency';
+
 export class WorkflowEngine {
     private context: WorkflowRunContext;
 
@@ -218,55 +220,79 @@ export class WorkflowEngine {
             nodeRun.error = error.message || 'Unknown error';
             nodeRun.endedAt = new Date();
             await this.persistNodeResult(nodeRun);
-            throw error;
         }
     }
 
-    // Execute nodes in topological order (only nodes in targetNodeIds)
+    private getIncomingRuns(nodeId: string): NodeRun[] {
+        const incomingEdges = this.context.edges.filter((edge) => edge.target === nodeId);
+        return incomingEdges
+            .map((edge) => this.context.nodeRuns.get(edge.source))
+            .filter((run): run is NodeRun => Boolean(run));
+    }
+
+    private isFailedDependency(run: NodeRun): boolean {
+        return run.status === 'FAILED' || (
+            run.status === 'SKIPPED' &&
+            typeof run.error === 'string' &&
+            run.error.startsWith(FAILED_DEP_SKIP_REASON)
+        );
+    }
+
+    // Execute nodes in dependency order with parallel waves.
     private async runTopological(targetNodeIds?: string[]): Promise<void> {
-        const visited = new Set<string>();
-        let hasRunningNodes = true;
-
-        while (hasRunningNodes) {
-            hasRunningNodes = false;
-
-            // Find runnable nodes:
-            // 1. Not visited
-            // 2. Status is PENDING (not SKIPPED)
-            // 3. All dependencies satisfied (incoming edges -> source SUCCESS or SKIPPED with cached output)
-            const runnableNodes = this.context.nodes.filter(node => {
-                if (visited.has(node.id)) return false;
-
+        while (true) {
+            let madeProgress = false;
+            const pendingNodes = this.context.nodes.filter((node) => {
                 const nodeRun = this.context.nodeRuns.get(node.id);
-                if (!nodeRun || nodeRun.status === 'SKIPPED') return false;
-
-                const incomingEdges = this.context.edges.filter(e => e.target === node.id);
-                const allDependenciesMet = incomingEdges.every(e => {
-                    const sourceRun = this.context.nodeRuns.get(e.source);
-                    return sourceRun && (sourceRun.status === 'SUCCESS' || sourceRun.status === 'SKIPPED');
-                });
-
-                return allDependenciesMet;
+                return nodeRun?.status === 'PENDING';
             });
 
-            if (runnableNodes.length === 0) {
-                // If unvisited nodes remain but none runnable -> Cycle or disconnected
-                const pendingNodes = Array.from(this.context.nodeRuns.values()).filter(r => r.status === 'PENDING');
-                if (pendingNodes.length > 0) {
-                    console.warn(`${pendingNodes.length} nodes unreachable (cycles or missing dependencies)`);
-                    break;
-                }
-                break; // All done
+            if (pendingNodes.length === 0) {
+                break;
             }
 
-            // Run them in parallel
-            await Promise.all(runnableNodes.map(async (node) => {
-                await this.executeNode(node.id);
-                visited.add(node.id);
-            }));
+            // Mark nodes that can never run because one or more dependencies failed.
+            for (const node of pendingNodes) {
+                const nodeRun = this.context.nodeRuns.get(node.id);
+                if (!nodeRun) continue;
+
+                const depRuns = this.getIncomingRuns(node.id);
+                const depsSettled = depRuns.every((dep) =>
+                    dep.status === 'SUCCESS' || dep.status === 'FAILED' || dep.status === 'SKIPPED'
+                );
+                const hasFailedDep = depRuns.some((dep) => this.isFailedDependency(dep));
+
+                if (depsSettled && hasFailedDep) {
+                    nodeRun.status = 'SKIPPED';
+                    nodeRun.error = `${FAILED_DEP_SKIP_REASON} for node ${node.id}`;
+                    madeProgress = true;
+                }
+            }
+
+            const runnableNodes = this.context.nodes.filter((node) => {
+                const nodeRun = this.context.nodeRuns.get(node.id);
+                if (!nodeRun || nodeRun.status !== 'PENDING') return false;
+
+                const depRuns = this.getIncomingRuns(node.id);
+                return depRuns.every((dep) =>
+                    dep.status === 'SUCCESS' || (dep.status === 'SKIPPED' && !this.isFailedDependency(dep))
+                );
+            });
 
             if (runnableNodes.length > 0) {
-                hasRunningNodes = true;
+                // Execute each topological wave in parallel.
+                await Promise.all(runnableNodes.map((node) => this.executeNode(node.id)));
+                madeProgress = true;
+            }
+
+            if (!madeProgress) {
+                // Cycles or disconnected dependency state.
+                const unresolved = Array.from(this.context.nodeRuns.values()).filter((run) => run.status === 'PENDING');
+                unresolved.forEach((run) => {
+                    run.status = 'SKIPPED';
+                    run.error = 'Skipped due to unresolved dependencies (possible cycle)';
+                });
+                break;
             }
         }
     }

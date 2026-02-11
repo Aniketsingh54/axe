@@ -76,14 +76,15 @@ async function uploadToBlob(filePath: string): Promise<string> {
 
     // Read file
     const fileBuffer = fs.readFileSync(filePath);
-    const fileName = path.basename(filePath);
+    const parsed = path.parse(path.basename(filePath));
+    const fileName = `${parsed.name}-${Date.now()}${parsed.ext || ".jpg"}`;
 
     console.log(`Uploading ${fileName} to Vercel Blob...`);
 
     try {
         const blob = await put(fileName, fileBuffer, {
             access: 'public',
-            // enhance: add random suffix to filename to avoid collisions if needed, but blob handles it
+            addRandomSuffix: true,
         });
 
         console.log(`Upload complete: ${blob.url}`);
