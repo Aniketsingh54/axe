@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { workflowId, nodes, edges, targetNodeId, targetNodeIds } = body;
+    const { workflowId, nodes, edges, targetNodeId, targetNodeIds, asyncExecution } = body;
 
     // Validate workflow ownership if ID is provided
     if (workflowId) {
@@ -27,16 +27,34 @@ export async function POST(req: Request) {
     // Initialize Engine
     const engine = new WorkflowEngine(workflowId || 'temp', nodes, edges);
 
-    // Run Workflow, Multiple Selected Nodes, or Single Node
+    if (asyncExecution) {
+      (async () => {
+        try {
+          if (targetNodeIds && Array.isArray(targetNodeIds) && targetNodeIds.length > 0) {
+            await engine.runNodes(targetNodeIds);
+          } else if (targetNodeId) {
+            await engine.runNode(targetNodeId);
+          } else {
+            await engine.run();
+          }
+        } catch (error) {
+          console.error('Async workflow execution failed:', error);
+        }
+      })();
+
+      return NextResponse.json({
+        runId: engine.getRunId(),
+        status: 'RUNNING',
+      });
+    }
+
+    // Run Workflow, Multiple Selected Nodes, or Single Node (sync mode)
     let result;
     if (targetNodeIds && Array.isArray(targetNodeIds) && targetNodeIds.length > 0) {
-      // Run multiple selected nodes with their dependencies
       result = await engine.runNodes(targetNodeIds);
     } else if (targetNodeId) {
-      // Run single node with its dependencies
       result = await engine.runNode(targetNodeId);
     } else {
-      // Run full workflow
       result = await engine.run();
     }
 

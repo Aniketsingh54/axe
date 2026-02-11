@@ -55,9 +55,56 @@ type ExecutionNodeResult = {
   status: 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED' | 'SKIPPED';
   outputs?: { output?: unknown };
   error?: string;
+  startedAt?: string;
+  endedAt?: string;
+};
+
+type PolledNodeResult = {
+  id: string;
+  nodeId: string;
+  status: 'SUCCESS' | 'FAILED';
+  output?: unknown;
+  error?: string | null;
+  startedAt: string;
+  endedAt: string;
+};
+
+type PolledRun = {
+  id: string;
+  status: 'RUNNING' | 'SUCCESS' | 'FAILED' | 'PARTIAL';
+  results: PolledNodeResult[];
 };
 
 const DAG_ANIMATION_TICK_MS = 900;
+const POLL_INTERVAL_MS = 700;
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const formatOutputForLog = (value: unknown): string => {
+  if (value === undefined || value === null || value === '') return '';
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 120 ? `${trimmed.slice(0, 120)}...` : trimmed;
+  }
+  try {
+    const json = JSON.stringify(value);
+    return json.length > 120 ? `${json.slice(0, 120)}...` : json;
+  } catch {
+    return String(value);
+  }
+};
+
+const extractOutputFromNodeResult = (result: ExecutionNodeResult | PolledNodeResult): unknown => {
+  const executionResult = result as ExecutionNodeResult;
+  if (executionResult.outputs && typeof executionResult.outputs === 'object' && 'output' in executionResult.outputs) {
+    return executionResult.outputs.output;
+  }
+  const polled = result as PolledNodeResult;
+  if (polled.output && typeof polled.output === 'object' && 'output' in (polled.output as Record<string, unknown>)) {
+    return (polled.output as Record<string, unknown>).output;
+  }
+  return polled.output;
+};
 
 const getExecutionScopeNodeIds = (targetNodeIds: string[] | undefined, edges: Edge[]): Set<string> => {
   if (!targetNodeIds || targetNodeIds.length === 0) {
@@ -216,32 +263,84 @@ export default function WorkflowCanvas() {
     }, DAG_ANIMATION_TICK_MS);
   }, [edges, nodes, stopPhaseAnimation, updateNodeData]);
 
-  const applyExecutionResultsToNodes = useCallback((results: ExecutionNodeResult[] | undefined) => {
-    if (!results || results.length === 0) return;
+  const applyNodeResult = useCallback((nodeResult: ExecutionNodeResult | PolledNodeResult) => {
+    const nodeInfo = nodes.find((n) => n.id === nodeResult.nodeId);
+    const nodeName = nodeInfo?.type || nodeResult.nodeId;
+    const output = extractOutputFromNodeResult(nodeResult);
+    const outputPreview = formatOutputForLog(output);
+    const isSuccess = nodeResult.status === 'SUCCESS';
 
-    const resultNodeIds = new Set<string>();
-    results.forEach((nodeResult) => {
-      resultNodeIds.add(nodeResult.nodeId);
-      const status: NodeRunStatus =
-        nodeResult.status === 'SUCCESS' ? 'success'
-          : nodeResult.status === 'FAILED' ? 'failed'
-            : 'idle';
-
-      updateNodeData(nodeResult.nodeId, {
-        isRunning: false,
-        runStatus: status,
-        output: nodeResult.outputs?.output,
-        error: nodeResult.error,
+    if (isSuccess) {
+      addExecutionLog({
+        level: 'success',
+        nodeId: nodeResult.nodeId,
+        nodeName,
+        message: outputPreview ? `Completed | Output: ${outputPreview}` : 'Completed successfully',
       });
-    });
+    } else {
+      addExecutionLog({
+        level: 'error',
+        nodeId: nodeResult.nodeId,
+        nodeName,
+        message: `Failed: ${nodeResult.error || 'Unknown error'}`,
+      });
+    }
 
-    // Any visualized node not returned by API is marked idle.
+    updateNodeData(nodeResult.nodeId, {
+      isRunning: false,
+      runStatus: (isSuccess ? 'success' : 'failed') as NodeRunStatus,
+      output,
+      error: nodeResult.error || undefined,
+    });
+  }, [addExecutionLog, nodes, updateNodeData]);
+
+  const settleUnreportedNodes = useCallback((resolvedNodeIds: Set<string>) => {
     visualizedScopeRef.current.forEach((nodeId) => {
-      if (!resultNodeIds.has(nodeId)) {
+      if (!resolvedNodeIds.has(nodeId)) {
         updateNodeData(nodeId, { isRunning: false, runStatus: 'idle' as NodeRunStatus });
       }
     });
   }, [updateNodeData]);
+
+  const pollRunUntilComplete = useCallback(async (workflowIdToPoll: string, runId: string): Promise<PolledRun['status']> => {
+    const seenResultIds = new Set<string>();
+    const resolvedNodeIds = new Set<string>();
+
+    while (true) {
+      const runRes = await fetch(`/api/workflows/${workflowIdToPoll}/runs/${runId}`, {
+        method: 'GET',
+        cache: 'no-store',
+      });
+
+      if (runRes.status === 404) {
+        await wait(POLL_INTERVAL_MS);
+        continue;
+      }
+
+      if (!runRes.ok) {
+        throw new Error(`Failed to poll run ${runId}: HTTP ${runRes.status}`);
+      }
+
+      const run: PolledRun = await runRes.json();
+      const sortedResults = [...(run.results || [])].sort(
+        (a, b) => new Date(a.endedAt).getTime() - new Date(b.endedAt).getTime()
+      );
+
+      for (const nodeResult of sortedResults) {
+        if (seenResultIds.has(nodeResult.id)) continue;
+        seenResultIds.add(nodeResult.id);
+        resolvedNodeIds.add(nodeResult.nodeId);
+        applyNodeResult(nodeResult);
+      }
+
+      if (run.status !== 'RUNNING') {
+        settleUnreportedNodes(resolvedNodeIds);
+        return run.status;
+      }
+
+      await wait(POLL_INTERVAL_MS);
+    }
+  }, [applyNodeResult, settleUnreportedNodes]);
 
   // Track selected nodes
   const onSelectionChange: OnSelectionChangeFunc = useCallback(({ nodes: selectedNodes }) => {
@@ -435,6 +534,7 @@ export default function WorkflowCanvas() {
           nodes: getCleanNodes(nodes),
           edges,
           targetNodeId,
+          asyncExecution: true,
         }),
       });
 
@@ -451,39 +551,16 @@ export default function WorkflowCanvas() {
       }
 
       const result = await response.json();
-      console.log('Single node execution result:', result);
+      const runId = result.runId as string | undefined;
+      const finalStatus = runId ? await pollRunUntilComplete(savedId, runId) : result.status;
+
+      stopPhaseAnimation();
       refreshHistory();
 
-      if (result.results) {
-        result.results.forEach((nodeResult: ExecutionNodeResult) => {
-          const nodeInfo = nodes.find(n => n.id === nodeResult.nodeId);
-          const name = nodeInfo?.type || nodeResult.nodeId;
-
-          if (nodeResult.status === 'SUCCESS') {
-            addExecutionLog({
-              level: 'success',
-              nodeId: nodeResult.nodeId,
-              nodeName: name,
-              message: `Completed successfully`,
-            });
-          } else if (nodeResult.status === 'FAILED') {
-            addExecutionLog({
-              level: 'error',
-              nodeId: nodeResult.nodeId,
-              nodeName: name,
-              message: `Failed: ${nodeResult.error || 'Unknown error'}`,
-            });
-          }
-
-        });
-        stopPhaseAnimation();
-        applyExecutionResultsToNodes(result.results);
-      }
-
-      if (result.status === 'SUCCESS') {
+      if (finalStatus === 'SUCCESS') {
         addExecutionLog({ level: 'success', message: `Single node execution completed!` });
       } else {
-        addExecutionLog({ level: 'warn', message: `Execution finished with status: ${result.status}` });
+        addExecutionLog({ level: 'warn', message: `Execution finished with status: ${finalStatus}` });
       }
 
     } catch (error: any) {
@@ -523,6 +600,7 @@ export default function WorkflowCanvas() {
           nodes: getCleanNodes(nodes),
           edges,
           targetNodeIds: selectedNodeIds,
+          asyncExecution: true,
         }),
       });
 
@@ -539,39 +617,16 @@ export default function WorkflowCanvas() {
       }
 
       const result = await response.json();
-      console.log('Selected nodes execution result:', result);
+      const runId = result.runId as string | undefined;
+      const finalStatus = runId ? await pollRunUntilComplete(savedId, runId) : result.status;
+
+      stopPhaseAnimation();
       refreshHistory();
 
-      if (result.results) {
-        result.results.forEach((nodeResult: ExecutionNodeResult) => {
-          const nodeInfo = nodes.find(n => n.id === nodeResult.nodeId);
-          const name = nodeInfo?.type || nodeResult.nodeId;
-
-          if (nodeResult.status === 'SUCCESS') {
-            addExecutionLog({
-              level: 'success',
-              nodeId: nodeResult.nodeId,
-              nodeName: name,
-              message: `Completed successfully`,
-            });
-          } else if (nodeResult.status === 'FAILED') {
-            addExecutionLog({
-              level: 'error',
-              nodeId: nodeResult.nodeId,
-              nodeName: name,
-              message: `Failed: ${nodeResult.error || 'Unknown error'}`,
-            });
-          }
-
-        });
-        stopPhaseAnimation();
-        applyExecutionResultsToNodes(result.results);
-      }
-
-      if (result.status === 'SUCCESS') {
+      if (finalStatus === 'SUCCESS') {
         addExecutionLog({ level: 'success', message: `Selected nodes execution completed!` });
       } else {
-        addExecutionLog({ level: 'warn', message: `Execution finished with status: ${result.status}` });
+        addExecutionLog({ level: 'warn', message: `Execution finished with status: ${finalStatus}` });
       }
 
     } catch (error: any) {
@@ -607,7 +662,7 @@ export default function WorkflowCanvas() {
       const response = await fetch('/api/run-workflow', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workflowId: savedId, nodes: getCleanNodes(nodes), edges }),
+        body: JSON.stringify({ workflowId: savedId, nodes: getCleanNodes(nodes), edges, asyncExecution: true }),
       });
 
       if (!response.ok) {
@@ -623,39 +678,16 @@ export default function WorkflowCanvas() {
       }
 
       const result = await response.json();
-      console.log('Workflow execution result:', result);
+      const runId = result.runId as string | undefined;
+      const finalStatus = runId ? await pollRunUntilComplete(savedId, runId) : result.status;
+
+      stopPhaseAnimation();
       refreshHistory();
 
-      if (result.results) {
-        result.results.forEach((nodeResult: ExecutionNodeResult) => {
-          const nodeInfo = nodes.find(n => n.id === nodeResult.nodeId);
-          const nodeName = nodeInfo?.type || nodeResult.nodeId;
-
-          if (nodeResult.status === 'SUCCESS') {
-            addExecutionLog({
-              level: 'success',
-              nodeId: nodeResult.nodeId,
-              nodeName,
-              message: `Completed successfully`,
-            });
-          } else if (nodeResult.status === 'FAILED') {
-            addExecutionLog({
-              level: 'error',
-              nodeId: nodeResult.nodeId,
-              nodeName,
-              message: `Failed: ${nodeResult.error || 'Unknown error'}`,
-            });
-          }
-
-        });
-        stopPhaseAnimation();
-        applyExecutionResultsToNodes(result.results);
-      }
-
-      if (result.status === 'SUCCESS') {
+      if (finalStatus === 'SUCCESS') {
         addExecutionLog({ level: 'success', message: `Workflow completed successfully!` });
       } else {
-        addExecutionLog({ level: 'warn', message: `Workflow finished with status: ${result.status}` });
+        addExecutionLog({ level: 'warn', message: `Workflow finished with status: ${finalStatus}` });
       }
 
     } catch (error: any) {

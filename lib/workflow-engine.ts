@@ -37,6 +37,33 @@ export class WorkflowEngine {
         };
     }
 
+    public getRunId(): string {
+        return this.context.runId;
+    }
+
+    private async persistNodeResult(nodeRun: NodeRun) {
+        if (!nodeRun.startedAt || !nodeRun.endedAt) return;
+        if (nodeRun.status !== 'SUCCESS' && nodeRun.status !== 'FAILED') return;
+
+        try {
+            await prisma.nodeResult.create({
+                data: {
+                    runId: this.context.runId,
+                    nodeId: nodeRun.nodeId,
+                    nodeType: nodeRun.type,
+                    status: nodeRun.status,
+                    input: (nodeRun.inputs || {}) as any,
+                    output: (nodeRun.outputs || {}) as any,
+                    error: nodeRun.error,
+                    startedAt: nodeRun.startedAt,
+                    endedAt: nodeRun.endedAt,
+                },
+            });
+        } catch (error) {
+            console.error(`Failed to persist node result for ${nodeRun.nodeId}:`, error);
+        }
+    }
+
     // Initialize all nodes as PENDING (or SKIPPED if not in target set)
     private initialize(targetNodeIds?: string[]) {
         this.context.nodes.forEach(node => {
@@ -183,12 +210,14 @@ export class WorkflowEngine {
             nodeRun.outputs = outputs;
             nodeRun.status = 'SUCCESS';
             nodeRun.endedAt = new Date();
+            await this.persistNodeResult(nodeRun);
 
         } catch (error: any) {
             console.error(`Node ${nodeId} execution failed:`, error);
             nodeRun.status = 'FAILED';
             nodeRun.error = error.message || 'Unknown error';
             nodeRun.endedAt = new Date();
+            await this.persistNodeResult(nodeRun);
             throw error;
         }
     }
@@ -254,7 +283,7 @@ export class WorkflowEngine {
         this.initialize(nodesToRun);
 
         // Create Run record in DB
-        const runRecord = await prisma.run.create({
+        await prisma.run.create({
             data: {
                 id: this.context.runId,
                 workflowId: this.context.workflowId,
@@ -285,18 +314,6 @@ export class WorkflowEngine {
                 data: {
                     status: finalStatus,
                     duration,
-                    results: {
-                        create: ranNodes.map(r => ({
-                            nodeId: r.nodeId,
-                            nodeType: r.type,
-                            status: r.status,
-                            input: (r.inputs || {}) as any,
-                            output: (r.outputs || {}) as any,
-                            error: r.error,
-                            startedAt: r.startedAt || new Date(),
-                            endedAt: r.endedAt || new Date(),
-                        })),
-                    },
                 },
             });
 
@@ -324,7 +341,7 @@ export class WorkflowEngine {
         this.initialize();
 
         // Create Run record in DB (PENDING)
-        const runRecord = await prisma.run.create({
+        await prisma.run.create({
             data: {
                 id: this.context.runId,
                 workflowId: this.context.workflowId,
@@ -354,18 +371,6 @@ export class WorkflowEngine {
                 data: {
                     status: finalStatus,
                     duration,
-                    results: {
-                        create: Array.from(this.context.nodeRuns.values()).map(r => ({
-                            nodeId: r.nodeId,
-                            nodeType: r.type,
-                            status: r.status,
-                            input: (r.inputs || {}) as any,
-                            output: (r.outputs || {}) as any,
-                            error: r.error,
-                            startedAt: r.startedAt || new Date(),
-                            endedAt: r.endedAt || new Date(),
-                        })),
-                    },
                 },
             });
 
@@ -406,7 +411,7 @@ export class WorkflowEngine {
         this.initialize(nodesToRun);
 
         // Create Run record in DB
-        const runRecord = await prisma.run.create({
+        await prisma.run.create({
             data: {
                 id: this.context.runId,
                 workflowId: this.context.workflowId,
@@ -437,18 +442,6 @@ export class WorkflowEngine {
                 data: {
                     status: finalStatus,
                     duration,
-                    results: {
-                        create: ranNodes.map(r => ({
-                            nodeId: r.nodeId,
-                            nodeType: r.type,
-                            status: r.status,
-                            input: (r.inputs || {}) as any,
-                            output: (r.outputs || {}) as any,
-                            error: r.error,
-                            startedAt: r.startedAt || new Date(),
-                            endedAt: r.endedAt || new Date(),
-                        })),
-                    },
                 },
             });
 
