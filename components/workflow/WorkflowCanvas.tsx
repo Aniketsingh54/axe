@@ -62,7 +62,7 @@ type ExecutionNodeResult = {
 type PolledNodeResult = {
   id: string;
   nodeId: string;
-  status: 'SUCCESS' | 'FAILED';
+  status: 'RUNNING' | 'SUCCESS' | 'FAILED';
   output?: unknown;
   error?: string | null;
   startedAt: string;
@@ -75,7 +75,6 @@ type PolledRun = {
   results: PolledNodeResult[];
 };
 
-const DAG_ANIMATION_TICK_MS = 900;
 const POLL_INTERVAL_MS = 700;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -127,51 +126,6 @@ const getExecutionScopeNodeIds = (targetNodeIds: string[] | undefined, edges: Ed
   return include;
 };
 
-const buildExecutionPhases = (nodes: Node[], edges: Edge[], scopeNodeIds?: Set<string>): string[][] => {
-  const includedIds = scopeNodeIds && scopeNodeIds.size > 0
-    ? new Set([...scopeNodeIds].filter((id) => nodes.some((node) => node.id === id)))
-    : new Set(nodes.map((node) => node.id));
-
-  const inDegree = new Map<string, number>();
-  const adjacency = new Map<string, string[]>();
-
-  for (const nodeId of includedIds) {
-    inDegree.set(nodeId, 0);
-    adjacency.set(nodeId, []);
-  }
-
-  for (const edge of edges) {
-    if (!includedIds.has(edge.source) || !includedIds.has(edge.target)) continue;
-    adjacency.get(edge.source)?.push(edge.target);
-    inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
-  }
-
-  const phases: string[][] = [];
-  const remaining = new Set(includedIds);
-  let current = [...includedIds].filter((id) => (inDegree.get(id) || 0) === 0);
-
-  while (current.length > 0) {
-    phases.push(current);
-    current.forEach((id) => remaining.delete(id));
-
-    const nextSet = new Set<string>();
-    for (const nodeId of current) {
-      for (const childId of adjacency.get(nodeId) || []) {
-        const nextDegree = (inDegree.get(childId) || 0) - 1;
-        inDegree.set(childId, nextDegree);
-        if (nextDegree === 0) nextSet.add(childId);
-      }
-    }
-    current = [...nextSet];
-  }
-
-  if (remaining.size > 0) {
-    phases.push([...remaining]);
-  }
-
-  return phases;
-};
-
 export default function WorkflowCanvas() {
   const {
     nodes,
@@ -200,24 +154,14 @@ export default function WorkflowCanvas() {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const phaseTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const visualizedScopeRef = useRef<Set<string>>(new Set());
 
-  const stopPhaseAnimation = useCallback(() => {
-    if (phaseTimerRef.current) {
-      clearInterval(phaseTimerRef.current);
-      phaseTimerRef.current = null;
-    }
-  }, []);
-
-  const startPhaseAnimation = useCallback((targetNodeIds?: string[]) => {
-    stopPhaseAnimation();
-
+  const initializeRunVisualState = useCallback((targetNodeIds?: string[]) => {
     const scope = getExecutionScopeNodeIds(targetNodeIds, edges);
     const scopeIds = scope.size > 0 ? [...scope] : nodes.map((node) => node.id);
     visualizedScopeRef.current = new Set(scopeIds);
 
-    // Initialize selected execution scope as queued.
+    // Start as queued; actual RUNNING/SUCCESS/FAILED come from backend polling.
     scopeIds.forEach((nodeId) => {
       updateNodeData(nodeId, {
         isRunning: false,
@@ -226,44 +170,17 @@ export default function WorkflowCanvas() {
         output: undefined,
       });
     });
-
-    const phases = buildExecutionPhases(nodes, edges, scope.size > 0 ? scope : undefined);
-    if (phases.length === 0) return;
-
-    const activatePhase = (phaseIndex: number) => {
-      if (phaseIndex > 0 && phases[phaseIndex - 1]) {
-        phases[phaseIndex - 1].forEach((nodeId) => {
-          updateNodeData(nodeId, {
-            isRunning: false,
-            runStatus: 'success' as NodeRunStatus,
-          });
-        });
-      }
-
-      if (phases[phaseIndex]) {
-        phases[phaseIndex].forEach((nodeId) => {
-          updateNodeData(nodeId, {
-            isRunning: true,
-            runStatus: 'running' as NodeRunStatus,
-          });
-        });
-      }
-    };
-
-    let phaseIndex = 0;
-    activatePhase(phaseIndex);
-
-    phaseTimerRef.current = setInterval(() => {
-      phaseIndex += 1;
-      if (phaseIndex >= phases.length) {
-        stopPhaseAnimation();
-        return;
-      }
-      activatePhase(phaseIndex);
-    }, DAG_ANIMATION_TICK_MS);
-  }, [edges, nodes, stopPhaseAnimation, updateNodeData]);
+  }, [edges, nodes, updateNodeData]);
 
   const applyNodeResult = useCallback((nodeResult: ExecutionNodeResult | PolledNodeResult) => {
+    if (nodeResult.status === 'RUNNING') {
+      updateNodeData(nodeResult.nodeId, {
+        isRunning: true,
+        runStatus: 'running' as NodeRunStatus,
+      });
+      return;
+    }
+
     const nodeInfo = nodes.find((n) => n.id === nodeResult.nodeId);
     const nodeName = nodeInfo?.type || nodeResult.nodeId;
     const output = extractOutputFromNodeResult(nodeResult);
@@ -303,7 +220,7 @@ export default function WorkflowCanvas() {
   }, [updateNodeData]);
 
   const pollRunUntilComplete = useCallback(async (workflowIdToPoll: string, runId: string): Promise<PolledRun['status']> => {
-    const seenResultIds = new Set<string>();
+    const seenResultStatus = new Map<string, PolledNodeResult['status']>();
     const resolvedNodeIds = new Set<string>();
 
     while (true) {
@@ -327,9 +244,13 @@ export default function WorkflowCanvas() {
       );
 
       for (const nodeResult of sortedResults) {
-        if (seenResultIds.has(nodeResult.id)) continue;
-        seenResultIds.add(nodeResult.id);
-        resolvedNodeIds.add(nodeResult.nodeId);
+        const prevStatus = seenResultStatus.get(nodeResult.id);
+        if (prevStatus === nodeResult.status) continue;
+        seenResultStatus.set(nodeResult.id, nodeResult.status);
+
+        if (nodeResult.status === 'SUCCESS' || nodeResult.status === 'FAILED') {
+          resolvedNodeIds.add(nodeResult.nodeId);
+        }
         applyNodeResult(nodeResult);
       }
 
@@ -346,10 +267,6 @@ export default function WorkflowCanvas() {
   const onSelectionChange: OnSelectionChangeFunc = useCallback(({ nodes: selectedNodes }) => {
     setSelectedNodeIds(selectedNodes.map(n => n.id));
   }, []);
-
-  useEffect(() => {
-    return () => stopPhaseAnimation();
-  }, [stopPhaseAnimation]);
 
   // Handle single node execution when pendingNodeRun is set
   useEffect(() => {
@@ -523,7 +440,7 @@ export default function WorkflowCanvas() {
     const nodeName = targetNode?.type || 'Node';
 
     addExecutionLog({ level: 'info', message: `Running single node: ${nodeName} (with dependencies)...` });
-    startPhaseAnimation([targetNodeId]);
+    initializeRunVisualState([targetNodeId]);
 
     try {
       const response = await fetch('/api/run-workflow', {
@@ -554,7 +471,6 @@ export default function WorkflowCanvas() {
       const runId = result.runId as string | undefined;
       const finalStatus = runId ? await pollRunUntilComplete(savedId, runId) : result.status;
 
-      stopPhaseAnimation();
       refreshHistory();
 
       if (finalStatus === 'SUCCESS') {
@@ -566,12 +482,10 @@ export default function WorkflowCanvas() {
     } catch (error: any) {
       console.error('Error running single node:', error);
       addExecutionLog({ level: 'error', message: `Execution failed: ${error.message}` });
-      stopPhaseAnimation();
       visualizedScopeRef.current.forEach((nodeId) => {
         updateNodeData(nodeId, { isRunning: false, runStatus: 'failed' as NodeRunStatus, error: error.message });
       });
     } finally {
-      stopPhaseAnimation();
       setIsRunning(false);
       setGlobalIsRunning(false);
     }
@@ -589,7 +503,7 @@ export default function WorkflowCanvas() {
     clearExecutionLogs();
 
     addExecutionLog({ level: 'info', message: `Running ${selectedNodeIds.length} selected node(s) with dependencies...` });
-    startPhaseAnimation(selectedNodeIds);
+    initializeRunVisualState(selectedNodeIds);
 
     try {
       const response = await fetch('/api/run-workflow', {
@@ -620,7 +534,6 @@ export default function WorkflowCanvas() {
       const runId = result.runId as string | undefined;
       const finalStatus = runId ? await pollRunUntilComplete(savedId, runId) : result.status;
 
-      stopPhaseAnimation();
       refreshHistory();
 
       if (finalStatus === 'SUCCESS') {
@@ -632,12 +545,10 @@ export default function WorkflowCanvas() {
     } catch (error: any) {
       console.error('Error running selected nodes:', error);
       addExecutionLog({ level: 'error', message: `Execution failed: ${error.message}` });
-      stopPhaseAnimation();
       visualizedScopeRef.current.forEach((nodeId) => {
         updateNodeData(nodeId, { isRunning: false, runStatus: 'failed' as NodeRunStatus, error: error.message });
       });
     } finally {
-      stopPhaseAnimation();
       setIsRunning(false);
       setGlobalIsRunning(false);
     }
@@ -654,7 +565,7 @@ export default function WorkflowCanvas() {
     clearExecutionLogs();
 
     addExecutionLog({ level: 'info', message: `Starting workflow execution with ${nodes.length} nodes...` });
-    startPhaseAnimation();
+    initializeRunVisualState();
 
     try {
       addExecutionLog({ level: 'info', message: 'Sending workflow to execution engine...' });
@@ -681,7 +592,6 @@ export default function WorkflowCanvas() {
       const runId = result.runId as string | undefined;
       const finalStatus = runId ? await pollRunUntilComplete(savedId, runId) : result.status;
 
-      stopPhaseAnimation();
       refreshHistory();
 
       if (finalStatus === 'SUCCESS') {
@@ -694,12 +604,10 @@ export default function WorkflowCanvas() {
       console.error('Error running workflow:', error);
       addExecutionLog({ level: 'error', message: `Execution failed: ${error.message}` });
       alert(`Execution failed: ${error.message}`);
-      stopPhaseAnimation();
       visualizedScopeRef.current.forEach((nodeId) => {
         updateNodeData(nodeId, { isRunning: false, runStatus: 'failed' as NodeRunStatus, error: error.message });
       });
     } finally {
-      stopPhaseAnimation();
       setIsRunning(false);
       setGlobalIsRunning(false);
     }

@@ -43,13 +43,29 @@ export class WorkflowEngine {
         return this.context.runId;
     }
 
+    private getNodeResultId(nodeId: string): string {
+        return `${this.context.runId}:${nodeId}`;
+    }
+
     private async persistNodeResult(nodeRun: NodeRun) {
-        if (!nodeRun.startedAt || !nodeRun.endedAt) return;
-        if (nodeRun.status !== 'SUCCESS' && nodeRun.status !== 'FAILED') return;
+        if (!nodeRun.startedAt) return;
+        if (nodeRun.status !== 'RUNNING' && nodeRun.status !== 'SUCCESS' && nodeRun.status !== 'FAILED') return;
+
+        const endedAt = nodeRun.endedAt || nodeRun.startedAt;
 
         try {
-            await prisma.nodeResult.create({
-                data: {
+            await prisma.nodeResult.upsert({
+                where: { id: this.getNodeResultId(nodeRun.nodeId) },
+                update: {
+                    status: nodeRun.status,
+                    input: (nodeRun.inputs || {}) as any,
+                    output: (nodeRun.outputs || {}) as any,
+                    error: nodeRun.error,
+                    startedAt: nodeRun.startedAt,
+                    endedAt,
+                },
+                create: {
+                    id: this.getNodeResultId(nodeRun.nodeId),
                     runId: this.context.runId,
                     nodeId: nodeRun.nodeId,
                     nodeType: nodeRun.type,
@@ -58,7 +74,7 @@ export class WorkflowEngine {
                     output: (nodeRun.outputs || {}) as any,
                     error: nodeRun.error,
                     startedAt: nodeRun.startedAt,
-                    endedAt: nodeRun.endedAt,
+                    endedAt,
                 },
             });
         } catch (error) {
@@ -144,6 +160,7 @@ export class WorkflowEngine {
             const upstreamInputs = this.getInputs(nodeId);
             const inputs = { ...manualInputs, ...upstreamInputs };
             nodeRun.inputs = inputs;
+            await this.persistNodeResult(nodeRun);
 
             let outputs: Record<string, unknown> = {};
 
