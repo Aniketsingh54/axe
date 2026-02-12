@@ -44,6 +44,15 @@ const workflows = [
   "Wan Lora - Rotate",
 ];
 
+const videoProps = {
+  autoPlay: true,
+  muted: true,
+  loop: true,
+  playsInline: true,
+  preload: "metadata" as const,
+  poster: "/samples/sample-product.png",
+};
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-[#090b12] text-white">
@@ -86,10 +95,11 @@ export default function Home() {
 
           <Link
             href="/sign-in?redirect_url=/workflows"
-            className="inline-flex h-11 items-center gap-2 bg-[#eef79e] px-5 text-[14px] font-medium text-black transition-colors hover:bg-[#f8ffbe] md:text-[16px]"
+            className="group relative inline-flex h-11 items-center gap-2 overflow-hidden bg-[#eef79e] px-5 text-[14px] font-medium text-black shadow-[0_8px_28px_rgba(238,247,158,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#f8ffbe] hover:shadow-[0_12px_34px_rgba(238,247,158,0.33)] md:text-[16px]"
           >
-            Start Now
-            <ArrowRight className="h-4 w-4" />
+            <span className="pointer-events-none absolute inset-0 -translate-x-[125%] bg-gradient-to-r from-transparent via-white/50 to-transparent transition-transform duration-700 group-hover:translate-x-[125%]" />
+            <span className="relative">Start Now</span>
+            <ArrowRight className="relative h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
           </Link>
         </div>
       </header>
@@ -124,7 +134,11 @@ export default function Home() {
             </div>
 
             <div className="overflow-hidden rounded-2xl border border-white/15 bg-[#161d2b] md:col-span-2 md:row-span-3">
-              <video src="/samples/sample-demo.mp4" autoPlay muted loop playsInline className="h-full w-full object-cover opacity-90" />
+              <video
+                src="/samples/sample-demo.mp4"
+                {...videoProps}
+                className="h-full w-full object-cover opacity-90 [transform:translateZ(0)]"
+              />
             </div>
 
             <div className="rounded-2xl border border-white/15 bg-white/95 p-4 text-black md:p-5">
@@ -158,7 +172,11 @@ export default function Home() {
       </section>
 
       <section id="collective" className="relative overflow-hidden bg-[#060b1a] py-16 md:py-24">
-        <video src="/samples/sample-demo.mp4" autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover opacity-35" />
+        <video
+          src="/samples/sample-demo.mp4"
+          {...videoProps}
+          className="absolute inset-0 h-full w-full object-cover opacity-35 [transform:translateZ(0)]"
+        />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(6,11,26,0.9),rgba(6,11,26,0.4),rgba(6,11,26,0.9))]" />
         <div className="relative mx-auto grid max-w-[1320px] gap-12 px-4 md:grid-cols-2 md:px-8">
           <div className="max-w-xl">
@@ -202,7 +220,11 @@ export default function Home() {
               ))}
             </div>
             <div className="mt-6 overflow-hidden rounded-2xl border border-white/15">
-              <video src="/samples/sample-demo.mp4" autoPlay muted loop playsInline className="h-[230px] w-full object-cover md:h-[420px]" />
+              <video
+                src="/samples/sample-demo.mp4"
+                {...videoProps}
+                className="h-[230px] w-full object-cover [transform:translateZ(0)] md:h-[420px]"
+              />
             </div>
           </div>
         </div>
@@ -222,7 +244,11 @@ export default function Home() {
               <Image src="/samples/sample-product.png" alt="layer editor" width={1280} height={720} className="h-full w-full object-cover" />
             </div>
             <div className="overflow-hidden rounded-2xl border border-white/15 bg-black/30">
-              <video src="/samples/sample-demo.mp4" autoPlay muted loop playsInline className="h-full w-full object-cover" />
+              <video
+                src="/samples/sample-demo.mp4"
+                {...videoProps}
+                className="h-full w-full object-cover [transform:translateZ(0)]"
+              />
             </div>
             <div className="col-span-2 overflow-hidden rounded-2xl border border-white/15 bg-black/30">
               <Image src="/samples/sample-product.png" alt="final output board" width={1280} height={720} className="h-[230px] w-full object-cover md:h-[300px]" />
@@ -247,7 +273,11 @@ export default function Home() {
           </div>
 
           <div className="mt-10 overflow-hidden rounded-3xl border border-black/10">
-            <video src="/samples/sample-demo.mp4" autoPlay muted loop playsInline className="h-[280px] w-full object-cover md:h-[520px]" />
+            <video
+              src="/samples/sample-demo.mp4"
+              {...videoProps}
+              className="h-[280px] w-full object-cover [transform:translateZ(0)] md:h-[520px]"
+            />
           </div>
         </div>
       </section>
@@ -332,10 +362,11 @@ export default function Home() {
 
         <Link
           href="/sign-in?redirect_url=/workflows"
-          className="m-4 inline-flex h-[60px] items-center gap-2 bg-[#eef79e] px-7 text-[21px] font-medium text-black transition-colors hover:bg-[#f8ffbe] md:absolute md:bottom-6 md:right-6 md:m-0 md:text-[28px]"
+          className="group relative m-4 inline-flex h-[60px] items-center gap-2 overflow-hidden bg-[#eef79e] px-7 text-[21px] font-medium text-black shadow-[0_10px_32px_rgba(238,247,158,0.25)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#f8ffbe] hover:shadow-[0_14px_36px_rgba(238,247,158,0.35)] md:absolute md:bottom-6 md:right-6 md:m-0 md:text-[28px]"
         >
-          Start Now
-          <ArrowRight className="h-6 w-6" />
+          <span className="pointer-events-none absolute inset-0 -translate-x-[125%] bg-gradient-to-r from-transparent via-white/50 to-transparent transition-transform duration-700 group-hover:translate-x-[125%]" />
+          <span className="relative">Start Now</span>
+          <ArrowRight className="relative h-6 w-6 transition-transform duration-200 group-hover:translate-x-1" />
         </Link>
       </footer>
     </main>
