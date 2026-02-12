@@ -18,7 +18,7 @@ import {
 } from '@xyflow/react';
 import { useStore } from '@/hooks/useStore';
 import { nodeTypes } from './config';
-import { Play, Save, Loader2, Download, Upload, Undo2, Redo2, FilePlus, PlayCircle } from 'lucide-react';
+import { Play, Save, Loader2, Undo2, Redo2, FilePlus, PlayCircle } from 'lucide-react';
 import { isValidConnection as validateConnection } from '@/lib/graph';
 import { type NodeRunStatus } from '@/components/nodes/BaseNode';
 
@@ -173,7 +173,6 @@ export default function WorkflowCanvas() {
   const [isRunning, setIsRunning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const visualizedScopeRef = useRef<Set<string>>(new Set());
   const loadedWorkflowRef = useRef<string | null>(null);
 
@@ -684,66 +683,6 @@ export default function WorkflowCanvas() {
     }
   };
 
-  // Export workflow as JSON
-  const handleExportWorkflow = () => {
-    const workflowData = {
-      version: 1,
-      name: workflowId ? `workflow-${workflowId}` : 'untitled-workflow',
-      exportedAt: new Date().toISOString(),
-      nodes: nodes.map(node => ({
-        id: node.id,
-        type: node.type,
-        position: node.position,
-        data: node.data,
-      })),
-      edges: edges.map(edge => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        sourceHandle: edge.sourceHandle,
-        targetHandle: edge.targetHandle,
-      })),
-    };
-
-    const blob = new Blob([JSON.stringify(workflowData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${workflowData.name}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // Import workflow from JSON
-  const handleImportWorkflow = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const workflowData = JSON.parse(text);
-
-      if (!workflowData.nodes || !workflowData.edges) {
-        throw new Error('Invalid workflow file format');
-      }
-
-      const { setNodes, setEdges } = useStore.getState();
-      setNodes(workflowData.nodes);
-      setEdges(workflowData.edges);
-      setWorkflowId(null);
-      await handleSaveWorkflow();
-
-      addExecutionLog({ level: 'success', message: 'Workflow imported successfully!' });
-    } catch (error: any) {
-      console.error('Import error:', error);
-      alert(`Failed to import workflow: ${error.message}`);
-    }
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
   return (
     <div className="relative h-full">
       {/* Action Buttons - Top Right */}
@@ -812,31 +751,6 @@ export default function WorkflowCanvas() {
           </button>
         )}
 
-        {/* Export Button */}
-        <button
-          onClick={handleExportWorkflow}
-          disabled={nodes.length === 0}
-          className="h-9 w-9 grid place-items-center rounded-md text-sm transition-colors bg-[#1f222a]/95 border border-[#343846] text-white/80 hover:bg-[#2a2e39] disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Export as JSON"
-        >
-          <Download className="w-4 h-4" />
-        </button>
-
-        {/* Import Button */}
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="h-9 w-9 grid place-items-center rounded-md text-sm transition-colors bg-[#1f222a]/95 border border-[#343846] text-white/80 hover:bg-[#2a2e39]"
-          title="Import from JSON"
-        >
-          <Upload className="w-4 h-4" />
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json"
-          onChange={handleImportWorkflow}
-          className="hidden"
-        />
       </div>
 
       <ReactFlow

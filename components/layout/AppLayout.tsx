@@ -3,17 +3,19 @@
 import { ReactNode, useState, useCallback, useRef, useEffect } from 'react';
 import NodePalette from '@/components/sidebar/NodePalette';
 import HistoryPanel from '@/components/sidebar/HistoryPanel';
-import { UserButton } from '@clerk/nextjs';
-import { Search, Clock3, Briefcase, Sparkles, Boxes, PencilRuler, Settings2, ChevronRight } from 'lucide-react';
+import { Search, Boxes, ChevronRight, FileJson } from 'lucide-react';
 
 interface AppLayoutProps {
   children: ReactNode;
 }
 
+type LeftPanelTab = 'quick' | 'workflows' | 'json';
+
 export default function AppLayout({ children }: AppLayoutProps) {
   const [rightSidebarWidth, setRightSidebarWidth] = useState(300);
   const [isResizing, setIsResizing] = useState(false);
   const [isCompactLeftPanel, setIsCompactLeftPanel] = useState(false);
+  const [activeLeftTab, setActiveLeftTab] = useState<LeftPanelTab>('quick');
   const resizeRef = useRef<HTMLDivElement>(null);
 
   const startResizing = useCallback((e: React.MouseEvent) => {
@@ -47,27 +49,26 @@ export default function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className={`flex h-screen w-full bg-dark-bg overflow-hidden ${isResizing ? 'select-none' : ''}`}>
       <aside className="w-12 shrink-0 border-r border-dark-border/70 bg-[#1b1e26] flex flex-col items-center py-3 gap-2">
-        <button className="w-8 h-8 rounded-md bg-[#222631] text-white/90 grid place-items-center">
+        <button
+          onClick={() => setActiveLeftTab('quick')}
+          className={`w-8 h-8 rounded-md grid place-items-center ${activeLeftTab === 'quick' ? 'bg-[#222631] text-white/90' : 'text-white/55 hover:text-white hover:bg-white/10'}`}
+          title="Quick Access"
+        >
           <Boxes className="w-4 h-4" />
         </button>
-        <button className="w-8 h-8 rounded-md text-white/55 hover:text-white hover:bg-white/10 grid place-items-center">
+        <button
+          onClick={() => setActiveLeftTab('workflows')}
+          className={`w-8 h-8 rounded-md grid place-items-center ${activeLeftTab === 'workflows' ? 'bg-[#dfe887] text-black' : 'text-white/55 hover:text-white hover:bg-white/10'}`}
+          title="Workflows"
+        >
           <Search className="w-4 h-4" />
         </button>
-        <button className="w-8 h-8 rounded-md bg-[#dfe887] text-black grid place-items-center">
-          <Clock3 className="w-4 h-4" />
-        </button>
-        <button className="w-8 h-8 rounded-md text-white/55 hover:text-white hover:bg-white/10 grid place-items-center">
-          <Briefcase className="w-4 h-4" />
-        </button>
-        <button className="w-8 h-8 rounded-md text-white/55 hover:text-white hover:bg-white/10 grid place-items-center">
-          <Sparkles className="w-4 h-4" />
-        </button>
-        <button className="w-8 h-8 rounded-md text-white/55 hover:text-white hover:bg-white/10 grid place-items-center">
-          <PencilRuler className="w-4 h-4" />
-        </button>
-        <div className="flex-1" />
-        <button className="w-8 h-8 rounded-md text-white/55 hover:text-white hover:bg-white/10 grid place-items-center">
-          <Settings2 className="w-4 h-4" />
+        <button
+          onClick={() => setActiveLeftTab('json')}
+          className={`w-8 h-8 rounded-md grid place-items-center ${activeLeftTab === 'json' ? 'bg-[#dfe887] text-black' : 'text-white/55 hover:text-white hover:bg-white/10'}`}
+          title="JSON Tools"
+        >
+          <FileJson className="w-4 h-4" />
         </button>
       </aside>
 
@@ -83,7 +84,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
-          <NodePalette />
+          <NodePalette activeTab={activeLeftTab} />
         </aside>
         {isCompactLeftPanel && (
           <button
@@ -96,17 +97,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
         )}
         <main className="flex-1 relative bg-dark-bg overflow-hidden">
           {children}
-          <div className="absolute right-6 top-3 z-10 flex items-center gap-3 rounded-xl border border-dark-border/70 bg-[#1d2028]/95 px-3 py-2">
-            <div className="text-[12px] text-white/75">Tasks</div>
-            <div className="rounded-md border border-dark-border px-2 py-1 text-[11px] text-white/80">Share</div>
-            <UserButton />
-          </div>
         </main>
         {/* Resizable Right Sidebar */}
         <aside
           ref={resizeRef}
           style={{ width: rightSidebarWidth }}
-          className="relative border-l border-dark-border/70 bg-[#1c1f27] overflow-y-auto"
+          className="relative border-l border-dark-border/70 bg-[#1c1f27] overflow-hidden"
         >
           {/* Resize Handle */}
           <div

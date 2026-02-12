@@ -26,6 +26,37 @@ body {
     font-family: "Suisse Intl", "Space Grotesk", "General Sans", "Avenir Next", "Segoe UI", sans-serif;
 }
 
+html,
+body {
+    scrollbar-width: thin;
+    scrollbar-color: #4a5266 #1a1f2b;
+}
+
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #4a5266 #1a1f2b;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #1a1f2b;
+    border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #4a5266;
+    border-radius: 9999px;
+    border: 2px solid #1a1f2b;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #5d667d;
+}
+
 /* React Flow overrides for dark theme */
 .react-flow__controls {
     background: #1f222a !important;

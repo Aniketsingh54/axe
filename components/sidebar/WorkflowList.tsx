@@ -16,7 +16,11 @@ interface Workflow {
 let workflowCache: { data: Workflow[] | null; timestamp: number } = { data: null, timestamp: 0 };
 const CACHE_TTL = 30000; // 30 seconds
 
-export default function WorkflowList() {
+interface WorkflowListProps {
+    searchQuery?: string;
+}
+
+export default function WorkflowList({ searchQuery = '' }: WorkflowListProps) {
     const [workflows, setWorkflows] = useState<Workflow[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -84,6 +88,10 @@ export default function WorkflowList() {
         fetchWorkflows();
     }, [currentWorkflowId]);
 
+    const filteredWorkflows = workflows.filter((workflow) =>
+        workflow.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
+    );
+
     if (isLoading) {
         return (
             <div className="flex justify-center p-8">
@@ -107,12 +115,12 @@ export default function WorkflowList() {
             </div>
 
             <div className="space-y-2">
-                {workflows.length === 0 ? (
+                {filteredWorkflows.length === 0 ? (
                     <div className="text-[11px] text-white/45 italic p-2 border border-dashed border-dark-border rounded-md">
-                        No workflows found. Save one to see it here!
+                        No workflows match your search.
                     </div>
                 ) : (
-                    workflows.map((workflow) => (
+                    filteredWorkflows.map((workflow) => (
                         <div
                             key={workflow.id}
                             className={`w-full text-left p-2.5 rounded-md border transition-all group relative ${currentWorkflowId === workflow.id
