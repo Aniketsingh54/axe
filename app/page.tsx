@@ -1,6 +1,7 @@
-import Image from "next/image";
+"use client";
+
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { useEffect } from "react";
 
 const models = [
   "GPT img 1",
@@ -13,35 +14,6 @@ const models = [
   "Kling",
   "Flux Pro 1.1 Ultra",
   "Minimax video",
-  "Ideogram V3",
-  "Luma ray 2",
-  "Hunyuan",
-  "Bria",
-];
-
-const tools = [
-  "Invert",
-  "Outpaint",
-  "Crop",
-  "Inpaint",
-  "Mask extractor",
-  "Upscale",
-  "Z depth extractor",
-  "Image describer",
-  "Channels",
-  "Painter",
-  "Relight",
-];
-
-const workflows = [
-  "Multiple Models",
-  "Wan LoRa Inflate",
-  "ControlNet - Structure Reference",
-  "Camera Angle Control",
-  "Relight 2.0 Human",
-  "Weavy Logo",
-  "Relight - Product",
-  "Wan Lora - Rotate",
 ];
 
 const videoProps = {
@@ -50,148 +22,229 @@ const videoProps = {
   loop: true,
   playsInline: true,
   preload: "metadata" as const,
-  poster: "/samples/sample-product.png",
+  poster: "https://cdn.prod.website-files.com/681b040781d5b5e278a69989/6835ce8a653081a97d92eebd_VIDEO_hero_Desktop.avif",
 };
 
 export default function Home() {
+  useEffect(() => {
+    const revealTargets = Array.from(document.querySelectorAll<HTMLElement>("[data-reveal]"));
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+          }
+        });
+      },
+      { threshold: 0.16, rootMargin: "0px 0px -12% 0px" }
+    );
+
+    revealTargets.forEach((el) => observer.observe(el));
+
+    const parallaxNodes = Array.from(document.querySelectorAll<HTMLElement>("[data-parallax]"));
+    let ticking = false;
+
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(() => {
+        const y = window.scrollY;
+        parallaxNodes.forEach((node) => {
+          const speed = Number(node.dataset.parallax ?? "0");
+          const offset = Math.max(-32, Math.min(36, y * speed));
+          node.style.transform = `translate3d(0, ${offset}px, 0)`;
+        });
+        ticking = false;
+      });
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
+
   return (
-    <main className="min-h-screen bg-[#090b12] text-white">
-      <div className="h-10 border-b border-white/10 bg-[#060810] px-4 text-center text-[13px] text-white/90 md:px-8">
-        <div className="mx-auto flex h-full max-w-[1320px] items-center justify-center">
-          Axe is now a part of Figma
+    <main className="min-h-screen bg-[#f3f4f6] text-black">
+      <div className="h-10 border-b border-white/15 bg-[#090d17] px-4 text-center text-[13px] text-white md:px-8">
+        <div className="mx-auto flex h-full max-w-[1520px] items-center justify-center font-medium">
+          Weavy is now a part of Figma
         </div>
       </div>
 
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0f1320]/90 px-4 backdrop-blur md:px-8">
-        <div className="mx-auto flex h-16 max-w-[1320px] items-center justify-between gap-4">
+      <header className="relative z-20 border-b border-black/8 bg-[#dfe3e8] px-4 md:px-8">
+        <div className="mx-auto flex h-[58px] max-w-[1520px] items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="grid h-8 w-8 place-items-center rounded bg-[#edf79f] text-xs font-bold text-black">
-              A
-            </div>
-            <div className="text-[12px] leading-tight tracking-[0.08em] text-white/85">
-              AXE
+            <div className="h-8 w-8 bg-[linear-gradient(180deg,#1f1f1f_0_45%,transparent_45%_55%,#1f1f1f_55%_100%)]" />
+            <div className="border-r border-black/25 pr-4 text-[15px] uppercase tracking-[0.03em]">WEAVY</div>
+            <div className="text-[15px] uppercase leading-[0.95] tracking-[0.03em]">
+              ARTISTIC
               <br />
-              ARTISTIC INTELLIGENCE
+              INTELLIGENCE
             </div>
           </div>
 
-          <nav className="hidden items-center gap-7 text-[12px] uppercase tracking-[0.08em] text-white/70 lg:flex">
-            <a href="#collective" className="hover:text-white">
+          <nav className="hidden items-center gap-8 text-[13px] uppercase tracking-[0.04em] text-black/70 lg:flex">
+            <a href="#collective" className="hover:text-black">
               Collective
             </a>
-            <a href="#enterprise" className="hover:text-white">
+            <a href="#enterprise" className="hover:text-black">
               Enterprise
             </a>
-            <a href="#pricing" className="hover:text-white">
+            <a href="#pricing" className="hover:text-black">
               Pricing
             </a>
-            <a href="#demo" className="hover:text-white">
+            <a href="#demo" className="hover:text-black">
               Request a Demo
             </a>
-            <Link href="/sign-in?redirect_url=/workflows" className="hover:text-white">
+            <Link href="/sign-in?redirect_url=/workflows" className="hover:text-black">
               Sign In
             </Link>
           </nav>
-
-          <Link
-            href="/sign-in?redirect_url=/workflows"
-            className="group relative inline-flex h-11 items-center gap-2 overflow-hidden bg-[#eef79e] px-5 text-[14px] font-medium text-black shadow-[0_8px_28px_rgba(238,247,158,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#f8ffbe] hover:shadow-[0_12px_34px_rgba(238,247,158,0.33)] md:text-[16px]"
-          >
-            <span className="pointer-events-none absolute inset-0 -translate-x-[125%] bg-gradient-to-r from-transparent via-white/50 to-transparent transition-transform duration-700 group-hover:translate-x-[125%]" />
-            <span className="relative">Start Now</span>
-            <ArrowRight className="relative h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
-          </Link>
         </div>
       </header>
 
-      <section className="relative overflow-hidden bg-[radial-gradient(circle_at_20%_8%,#213064_0%,#090b12_38%)]">
-        <div className="absolute inset-0 opacity-[0.16] [background-image:radial-gradient(#9aa8ff_1px,transparent_1px)] [background-size:12px_12px]" />
-        <div className="relative mx-auto max-w-[1320px] px-4 pb-20 pt-14 md:px-8 md:pt-20">
-          <div className="grid gap-10 md:grid-cols-[0.8fr_1.2fr] md:gap-16">
-            <h1 className="text-[56px] font-medium leading-[0.9] tracking-[-0.04em] md:text-[108px]">
-              Axe
-            </h1>
+      <Link
+        href="/sign-in?redirect_url=/workflows"
+        className="group fixed right-0 top-10 z-40 inline-flex h-[110px] w-[255px] items-center justify-center bg-[#eef79e] text-[56px] leading-none tracking-[-0.04em] text-black transition-colors hover:bg-[#f7ffbf] max-lg:h-[74px] max-lg:w-[170px] max-lg:text-[38px] max-sm:hidden"
+      >
+        Start Now
+      </Link>
+
+      <section
+        className="relative overflow-hidden px-4 pb-8 pt-14 md:px-8 md:pt-20"
+        style={{
+          backgroundImage:
+            "linear-gradient(0deg, #ffffff4d 34%, #c1cdd559 71%), url('https://cdn.prod.website-files.com/681b040781d5b5e278a69989/681ccdbeb607e939f7db68fa_BG%20NET%20Hero.avif')",
+          backgroundPosition: "0 0, 50%",
+          backgroundSize: "auto, cover",
+        }}
+      >
+        <div className="absolute inset-0 opacity-35 [background-image:linear-gradient(to_right,rgba(255,255,255,0.4)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.4)_1px,transparent_1px)] [background-size:22px_22px]" />
+        <div className="relative mx-auto max-w-[1520px]">
+          <div className="grid gap-8 md:grid-cols-[0.92fr_1.08fr]">
+            <h1 className="text-[clamp(78px,10vw,132px)] font-medium leading-[0.88] tracking-[-0.045em]">Weavy</h1>
             <div>
-              <h2 className="text-[56px] font-medium leading-[0.9] tracking-[-0.04em] md:text-[108px]">
+              <h2 className="text-[clamp(78px,10vw,132px)] font-medium leading-[0.88] tracking-[-0.05em]">
                 Artistic Intelligence
               </h2>
-              <p className="mt-7 max-w-2xl text-[17px] leading-tight text-white/72">
-                Turn your creative vision into scalable workflows. Access all AI models and professional editing
-                tools in one node based platform.
+              <p className="mt-8 max-w-[650px] text-[38px] leading-[1.03] tracking-[-0.015em] text-black/70 max-lg:text-[24px] max-md:text-[18px]">
+                Turn your creative vision into scalable workflows. Access all AI models and professional editing tools
+                in one node based platform.
               </p>
             </div>
           </div>
 
-          <div className="mt-12 grid auto-rows-[110px] gap-4 md:auto-rows-[150px] md:grid-cols-4">
-            <div className="overflow-hidden rounded-2xl border border-white/15 bg-white/10 md:row-span-2">
-              <Image
-                src="/samples/sample-product.png"
-                alt="creative preview"
-                width={1280}
-                height={720}
-                className="h-full w-full object-cover"
-              />
-            </div>
+          <div
+            className="relative mt-16 grid grid-cols-12 gap-4 rounded-2xl bg-[linear-gradient(180deg,#f7f7f5_0%,#edeceb_45%,#dbe1dd_100%)] p-4 pb-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]"
+            data-reveal
+          >
+            <svg
+              className="pointer-events-none absolute inset-0 hidden h-full w-full md:block"
+              viewBox="0 0 1200 620"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <path d="M150 132 C 275 132, 290 175, 390 200" stroke="#d6d6d6" strokeWidth="1.2" fill="none" />
+              <path d="M180 430 C 285 430, 305 252, 390 206" stroke="#d6d6d6" strokeWidth="1.2" fill="none" />
+              <path d="M560 200 C 650 205, 680 220, 770 218" stroke="#d6d6d6" strokeWidth="1.2" fill="none" />
+              <path d="M560 205 C 650 240, 700 300, 770 355" stroke="#d6d6d6" strokeWidth="1.2" fill="none" />
+              <path d="M890 218 C 975 220, 1000 150, 1050 140" stroke="#d6d6d6" strokeWidth="1.2" fill="none" />
+              <path d="M890 355 C 980 332, 1005 242, 1050 184" stroke="#d6d6d6" strokeWidth="1.2" fill="none" />
+              <circle cx="150" cy="132" r="5.3" fill="#e5e5e5" stroke="#fff" />
+              <circle cx="180" cy="430" r="5.3" fill="#e5e5e5" stroke="#fff" />
+              <circle cx="390" cy="200" r="5.3" fill="#e5e5e5" stroke="#fff" />
+              <circle cx="560" cy="205" r="5.3" fill="#e5e5e5" stroke="#fff" />
+              <circle cx="770" cy="218" r="5.3" fill="#e5e5e5" stroke="#fff" />
+              <circle cx="770" cy="355" r="5.3" fill="#e5e5e5" stroke="#fff" />
+              <circle cx="1050" cy="140" r="5.3" fill="#e5e5e5" stroke="#fff" />
+            </svg>
 
-            <div className="overflow-hidden rounded-2xl border border-white/15 bg-[#161d2b] md:col-span-2 md:row-span-3">
-              <video
-                src="/samples/sample-demo.mp4"
-                {...videoProps}
-                className="h-full w-full object-cover opacity-90 [transform:translateZ(0)]"
+            <article
+              className="col-span-3 overflow-hidden rounded-xl border border-black/8 bg-[#adb5bc] max-lg:col-span-5 max-md:col-span-6"
+              data-parallax="0.015"
+            >
+              <div className="px-2 pb-1 pt-2 text-[11px] uppercase tracking-[0.2em] text-black/80">3D Rodin 2.0</div>
+              <img
+                src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/681cd65ba87c69df161752e5_3d_card.avif"
+                alt="3D model card"
+                className="h-[232px] w-full object-cover"
               />
-            </div>
+            </article>
 
-            <div className="rounded-2xl border border-white/15 bg-white/95 p-4 text-black md:p-5">
-              <div className="mb-2 text-[11px] uppercase tracking-[0.14em] text-black/55">Text Prompt</div>
-              <p className="text-[13px] leading-tight text-black/70">
-                A product hero render with rich texture, dramatic depth, and studio quality relighting.
+            <article
+              className="col-span-6 row-span-2 overflow-hidden rounded-xl border border-black/8 bg-[#dbd7d6] max-lg:col-span-7 max-md:col-span-12"
+              data-parallax="0.009"
+            >
+              <div className="px-2 pb-1 pt-2 text-[11px] uppercase tracking-[0.2em] text-black/80">Image Stable Diffusion</div>
+              <img
+                src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/681cd7cbc22419b32bb9d8d8_hcard%20-%20STABLE%20DIFFUSION.avif"
+                alt="Stable diffusion card"
+                className="h-[560px] w-full object-cover max-md:h-[420px]"
+              />
+            </article>
+
+            <article
+              className="col-span-3 rounded-xl border border-black/8 bg-[#f4f4f4] p-3 text-black/60 max-lg:col-span-7 max-md:col-span-12"
+              data-parallax="0.011"
+            >
+              <div className="text-[11px] uppercase tracking-[0.2em] text-black/80">Text</div>
+              <p className="mt-2 text-[13px] leading-tight">
+                A Great-Tailed Grackle bird is flying from background and settling on the model&apos;s shoulder.
               </p>
-            </div>
+            </article>
 
-            <div className="overflow-hidden rounded-2xl border border-white/15 bg-[#cdd6a9]/75">
-              <Image
-                src="/samples/sample-product.png"
-                alt="generated variation"
-                width={1280}
-                height={720}
-                className="h-full w-full object-cover"
+            <article
+              className="col-span-3 overflow-hidden rounded-xl border border-black/8 bg-[#bbc5b8] max-lg:col-span-5 max-md:col-span-6"
+              data-parallax="0.02"
+            >
+              <div className="px-2 pb-1 pt-2 text-[11px] uppercase tracking-[0.2em] text-black/80">Color Reference</div>
+              <img
+                src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/681cd77722078ff43fe428f3_hcard-color%20reference.avif"
+                alt="Color reference card"
+                className="h-[110px] w-full object-cover"
               />
-            </div>
+            </article>
 
-            <div className="overflow-hidden rounded-2xl border border-white/15 bg-black md:col-span-2">
-              <Image
-                src="/samples/sample-product.png"
-                alt="composited output"
-                width={1280}
-                height={720}
-                className="h-full w-full object-cover opacity-90"
+            <article
+              className="col-span-3 row-span-2 overflow-hidden rounded-xl border border-black/8 bg-[#ddd8d8] max-lg:col-span-5 max-md:col-span-6"
+              data-parallax="0.013"
+            >
+              <div className="px-2 pb-1 pt-2 text-[11px] uppercase tracking-[0.2em] text-black/80">Video Minimax Video</div>
+              <video
+                src="https://assets.weavy.ai/homepage/hero/hero_video.mp4"
+                {...videoProps}
+                className="h-[560px] w-full object-cover max-md:h-[420px]"
               />
-            </div>
+            </article>
+
+            <article
+              className="col-span-3 overflow-hidden rounded-xl border border-black/8 bg-[#c7cebe] max-lg:col-span-7 max-md:col-span-6"
+              data-parallax="0.02"
+            >
+              <div className="px-2 pb-1 pt-2 text-[11px] uppercase tracking-[0.2em] text-black/80">Image Flux Pro 1.1</div>
+              <img
+                src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/6837510acbe777269734b387_bird_desktop.avif"
+                alt="Bird reference card"
+                className="h-[266px] w-full object-cover"
+              />
+            </article>
           </div>
         </div>
       </section>
 
-      <section id="collective" className="relative overflow-hidden bg-[#060b1a] py-16 md:py-24">
-        <video
-          src="/samples/sample-demo.mp4"
-          {...videoProps}
-          className="absolute inset-0 h-full w-full object-cover opacity-35 [transform:translateZ(0)]"
-        />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(6,11,26,0.9),rgba(6,11,26,0.4),rgba(6,11,26,0.9))]" />
-        <div className="relative mx-auto grid max-w-[1320px] gap-12 px-4 md:grid-cols-2 md:px-8">
-          <div className="max-w-xl">
-            <h3 className="text-[54px] font-medium leading-[0.92] tracking-[-0.03em] md:text-[84px]">
-              Use all AI models, together at last
-            </h3>
-            <p className="mt-6 text-[18px] leading-tight text-white/78">
-              AI models and professional editing tools in one node-based platform. Turn creative vision into scalable
-              workflows without compromising quality.
-            </p>
-          </div>
-
-          <div className="grid gap-2 text-[38px] leading-[0.92] tracking-[-0.03em] text-white/90 md:text-[62px]">
+      <section id="collective" className="bg-[#060b1a] px-4 py-20 text-white md:px-8" data-reveal>
+        <div className="mx-auto grid max-w-[1520px] gap-10 md:grid-cols-[1fr_1.1fr]">
+          <h3 className="text-[54px] leading-[0.92] tracking-[-0.03em] md:text-[90px]">
+            Use all AI models, together at last
+          </h3>
+          <div className="grid gap-2 text-[42px] leading-[0.92] tracking-[-0.03em] md:text-[74px]">
             {models.map((model, idx) => (
-              <div key={model} className={idx === 0 ? "text-[#edf79f]" : ""}>
+              <div key={model} className={idx === 0 ? "text-[#edf79f]" : "text-white/94"}>
                 {model}
               </div>
             ))}
@@ -199,138 +252,35 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="bg-[#080b13] py-16 md:py-22">
-        <div className="mx-auto max-w-[1320px] px-4 md:px-8">
-          <div className="text-center">
-            <h3 className="text-[36px] font-medium leading-[1] tracking-[-0.03em] md:text-[62px]">
-              With all the professional tools you rely on
-            </h3>
-            <div className="mt-2 text-[18px] text-white/70">In one seamless workflow</div>
-          </div>
-
-          <div className="mt-12 rounded-3xl border border-white/10 bg-[#111624] p-6 md:p-8">
-            <div className="grid grid-cols-2 gap-3 text-[14px] md:grid-cols-4 lg:grid-cols-6">
-              {tools.map((tool) => (
-                <div
-                  key={tool}
-                  className="rounded-xl border border-white/15 bg-black/25 px-3 py-3 text-center text-white/86"
-                >
-                  {tool}
-                </div>
-              ))}
-            </div>
-            <div className="mt-6 overflow-hidden rounded-2xl border border-white/15">
-              <video
-                src="/samples/sample-demo.mp4"
-                {...videoProps}
-                className="h-[230px] w-full object-cover [transform:translateZ(0)] md:h-[420px]"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-[#0d111d] py-16 md:py-22">
-        <div className="mx-auto grid max-w-[1320px] gap-10 px-4 md:grid-cols-[1fr_1.1fr] md:px-8">
-          <div>
-            <h3 className="text-[44px] font-medium leading-[0.95] tracking-[-0.03em] md:text-[68px]">Control the Outcome</h3>
-            <p className="mt-5 max-w-xl text-[18px] text-white/76">
-              Layers, type, and blends all the tools to bring your wildest ideas to life. Your creativity, our
-              compositing power.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="overflow-hidden rounded-2xl border border-white/15 bg-black/30">
-              <Image src="/samples/sample-product.png" alt="layer editor" width={1280} height={720} className="h-full w-full object-cover" />
-            </div>
-            <div className="overflow-hidden rounded-2xl border border-white/15 bg-black/30">
-              <video
-                src="/samples/sample-demo.mp4"
-                {...videoProps}
-                className="h-full w-full object-cover [transform:translateZ(0)]"
-              />
-            </div>
-            <div className="col-span-2 overflow-hidden rounded-2xl border border-white/15 bg-black/30">
-              <Image src="/samples/sample-product.png" alt="final output board" width={1280} height={720} className="h-[230px] w-full object-cover md:h-[300px]" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="enterprise" className="bg-[#efefef] py-16 text-black md:py-24">
-        <div className="mx-auto max-w-[1320px] px-4 md:px-8">
-          <div className="mb-6 text-[15px] text-black/70">
-            Maximize your team ability, by automatically generating a simplified UI
-          </div>
-          <div className="flex flex-wrap items-center gap-5 md:gap-9">
-            <h3 className="text-[50px] font-medium leading-none tracking-[-0.04em] md:text-[88px]">From Workflow</h3>
+      <section id="enterprise" className="bg-[#efefef] px-4 py-20 text-black md:px-8" data-reveal>
+        <div className="mx-auto max-w-[1520px]">
+          <div className="text-[15px] text-black/68">Maximize your team ability, by automatically generating a simplified UI</div>
+          <div className="mt-5 flex flex-wrap items-center gap-6">
+            <h3 className="text-[52px] leading-none tracking-[-0.04em] md:text-[92px]">From Workflow</h3>
             <div className="h-14 w-24 rounded-full bg-[#e5ef91] p-2">
               <div className="h-10 w-10 rounded-full bg-black" />
             </div>
-            <h3 className="text-[50px] font-medium leading-none tracking-[-0.04em] text-black/36 md:text-[88px]">
-              to App Mode
-            </h3>
+            <h3 className="text-[52px] leading-none tracking-[-0.04em] text-black/35 md:text-[92px]">to App Mode</h3>
           </div>
-
           <div className="mt-10 overflow-hidden rounded-3xl border border-black/10">
-            <video
-              src="/samples/sample-demo.mp4"
-              {...videoProps}
-              className="h-[280px] w-full object-cover [transform:translateZ(0)] md:h-[520px]"
-            />
+            <video src="/samples/sample-demo.mp4" {...videoProps} className="h-[260px] w-full object-cover md:h-[520px]" />
           </div>
         </div>
       </section>
 
-      <section className="bg-[#0a0d15] py-16 md:py-24">
-        <div className="mx-auto max-w-[1320px] px-4 md:px-8">
-          <h3 className="text-[44px] font-medium leading-[0.95] tracking-[-0.03em] md:text-[70px]">Explore Our Workflows</h3>
-          <p className="mt-4 max-w-3xl text-[18px] text-white/76">
-            From multi-layer compositing to matte manipulation, Axe keeps up with your creativity with all the
-            editing tools you recognize and rely on.
-          </p>
-
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-            {workflows.map((workflow) => (
-              <article key={workflow} className="overflow-hidden rounded-2xl border border-white/12 bg-[#141926]">
-                <Image
-                  src="/samples/sample-product.png"
-                  alt={workflow}
-                  width={800}
-                  height={450}
-                  className="h-[180px] w-full object-cover"
-                />
-                <div className="p-4">
-                  <h4 className="text-[17px] text-white/92">{workflow}</h4>
-                  <Link
-                    href="/builder"
-                    className="mt-4 inline-flex items-center gap-2 text-[13px] uppercase tracking-[0.09em] text-[#eef79e] hover:text-[#f8ffbe]"
-                  >
-                    Try
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <footer id="pricing" className="relative overflow-hidden bg-[#2a2d36] text-white">
-        <div className="mx-auto max-w-[1320px] px-4 pb-14 pt-16 md:px-8 md:pt-24">
-          <div className="max-w-4xl text-[50px] leading-[0.92] tracking-[-0.04em] md:text-[96px]">
+      <footer id="pricing" className="relative overflow-hidden bg-[#2a2d36] px-4 pb-14 pt-16 text-white md:px-8 md:pt-24" data-reveal>
+        <div className="mx-auto max-w-[1520px]">
+          <div className="max-w-5xl text-[52px] leading-[0.9] tracking-[-0.04em] md:text-[106px]">
             Artificial Intelligence + Human Creativity
           </div>
-
-          <div className="mt-12 grid gap-10 md:grid-cols-[1.3fr_1fr]">
+          <div className="mt-12 grid gap-8 md:grid-cols-[1.2fr_1fr]">
             <div>
-              <p className="max-w-md text-[14px] text-white/85">
-                Axe is a new way to create. We&apos;re bridging the gap between AI capabilities and human creativity,
-                to continue the tradition of craft in artistic expression.
+              <p className="max-w-md text-[14px] text-white/88">
+                We bridge the gap between AI capabilities and human creativity while preserving craftsmanship in modern
+                digital workflows.
               </p>
-              <div className="mt-8 text-[12px] text-white/60">AXE © 2026. All rights reserved.</div>
+              <div className="mt-8 text-[12px] text-white/58">AXE © 2026. All rights reserved.</div>
             </div>
-
             <div id="demo" className="grid grid-cols-2 gap-8 text-[13px] text-white/78">
               <div className="space-y-2">
                 <div className="text-[11px] uppercase text-white/45">Get Started</div>
@@ -359,16 +309,19 @@ export default function Home() {
             </div>
           </div>
         </div>
-
-        <Link
-          href="/sign-in?redirect_url=/workflows"
-          className="group relative m-4 inline-flex h-[60px] items-center gap-2 overflow-hidden bg-[#eef79e] px-7 text-[21px] font-medium text-black shadow-[0_10px_32px_rgba(238,247,158,0.25)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#f8ffbe] hover:shadow-[0_14px_36px_rgba(238,247,158,0.35)] md:absolute md:bottom-6 md:right-6 md:m-0 md:text-[28px]"
-        >
-          <span className="pointer-events-none absolute inset-0 -translate-x-[125%] bg-gradient-to-r from-transparent via-white/50 to-transparent transition-transform duration-700 group-hover:translate-x-[125%]" />
-          <span className="relative">Start Now</span>
-          <ArrowRight className="relative h-6 w-6 transition-transform duration-200 group-hover:translate-x-1" />
-        </Link>
       </footer>
+
+      <style jsx>{`
+        [data-reveal] {
+          opacity: 0;
+          transform: translateY(22px);
+          transition: opacity 0.65s ease, transform 0.65s ease;
+        }
+        [data-reveal].is-visible {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      `}</style>
     </main>
   );
 }
