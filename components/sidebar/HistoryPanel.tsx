@@ -65,7 +65,7 @@ export default function HistoryPanel() {
   const { workflowId, historyTrigger, executionLogs, clearExecutionLogs, isRunning } = useStore();
   const [runs, setRuns] = useState<Run[]>([]);
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
-  const [showLiveLogs, setShowLiveLogs] = useState(true);
+  const [showLiveLogs, setShowLiveLogs] = useState(false);
   const [displayLimit, setDisplayLimit] = useState(5);
   const logsRef = useRef<HTMLDivElement>(null);
   const runsCache = useRef<{ workflowId: string | null; data: Run[]; timestamp: number }>({ workflowId: null, data: [], timestamp: 0 });
@@ -285,7 +285,7 @@ export default function HistoryPanel() {
       </div>
 
       {/* Execution Logs Section - BOTTOM (Flexible) */}
-      <div className="mt-4 rounded-lg border border-white/10 bg-[#161924] overflow-hidden flex flex-col min-h-[180px] max-h-[50%]">
+      <div className="mt-4 rounded-lg border border-white/10 bg-[#161924] overflow-hidden flex flex-col min-h-[96px] max-h-[34%]">
         <div
           className="flex items-center justify-between px-3 py-2 bg-white/5 cursor-pointer hover:bg-white/10 transition-colors shrink-0"
           onClick={() => setShowLiveLogs(!showLiveLogs)}

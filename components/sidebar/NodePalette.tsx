@@ -64,19 +64,19 @@ export default function NodePalette() {
       <div className="grid grid-cols-2 gap-2">
         <DraggableNodeButton
           icon={<Type className="w-4 h-4" />}
-          label="Prompt"
+          label="Text Node"
           nodeType="text"
         />
 
         <DraggableNodeButton
           icon={<Image className="w-4 h-4" />}
-          label="Import"
+          label="Upload Image"
           nodeType="upload-image"
         />
 
         <DraggableNodeButton
           icon={<Video className="w-4 h-4" />}
-          label="Export"
+          label="Upload Video"
           nodeType="upload-video"
         />
 
@@ -84,19 +84,19 @@ export default function NodePalette() {
           icon={
             <Sparkles className="w-4 h-4 text-[#dfe887]" />
           }
-          label="Preview"
+          label="Run Any LLM"
           nodeType="llm"
         />
 
         <DraggableNodeButton
           icon={<Crop className="w-4 h-4" />}
-          label="Crop"
+          label="Crop Image"
           nodeType="crop-image"
         />
 
         <DraggableNodeButton
           icon={<Film className="w-4 h-4" />}
-          label="Extract"
+          label="Extract Frame"
           nodeType="extract-frame"
         />
       </div>

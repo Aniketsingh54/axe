@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   ReactFlow,
   Background,
@@ -150,6 +151,7 @@ export default function WorkflowCanvas() {
     onNodesChange,
     onEdgesChange,
     addNode,
+    setNodes,
     setEdges,
     updateNodeData,
     workflowId,
@@ -167,11 +169,13 @@ export default function WorkflowCanvas() {
     clearWorkflow,
   } = useStore();
   const { screenToFlowPosition } = useReactFlow();
+  const searchParams = useSearchParams();
   const [isRunning, setIsRunning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const visualizedScopeRef = useRef<Set<string>>(new Set());
+  const loadedWorkflowRef = useRef<string | null>(null);
 
   const initializeRunVisualState = useCallback((targetNodeIds?: string[], direction: 'UPSTREAM' | 'DOWNSTREAM' = 'DOWNSTREAM') => {
     const scope = getExecutionScopeNodeIds(targetNodeIds, edges, direction);
@@ -297,6 +301,43 @@ export default function WorkflowCanvas() {
   const onSelectionChange: OnSelectionChangeFunc = useCallback(({ nodes: selectedNodes }) => {
     setSelectedNodeIds(selectedNodes.map(n => n.id));
   }, []);
+
+  // Load a workflow passed via /builder?workflowId=...
+  useEffect(() => {
+    const routeWorkflowId = searchParams.get('workflowId');
+    if (!routeWorkflowId) {
+      // /builder without an id should be a fresh canvas entry point
+      if (loadedWorkflowRef.current !== '__new__') {
+        clearWorkflow();
+        loadedWorkflowRef.current = '__new__';
+      }
+      return;
+    }
+
+    if (loadedWorkflowRef.current === routeWorkflowId) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/workflows/${routeWorkflowId}`, { cache: 'no-store' });
+        if (!res.ok) {
+          throw new Error(`Failed to load workflow (${res.status})`);
+        }
+        const workflow = await res.json();
+        if (cancelled) return;
+        setNodes(workflow.nodes || []);
+        setEdges(workflow.edges || []);
+        setWorkflowId(workflow.id);
+        loadedWorkflowRef.current = routeWorkflowId;
+      } catch (error) {
+        console.error('Failed to load workflow by route id:', error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, clearWorkflow, setEdges, setNodes, setWorkflowId]);
 
   // Handle single node execution when pendingNodeRun is set
   useEffect(() => {
