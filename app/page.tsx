@@ -168,9 +168,9 @@ export default function Home() {
     [collectiveProgress]
   );
 
-  const mergeProgress = clamp((workflowProgress - 0.18) / 0.48);
-  const scatterOpacity = clamp(1 - mergeProgress * 1.2);
-  const mergeOpacity = clamp((mergeProgress - 0.1) / 0.9);
+  const mergeProgress = clamp((workflowProgress - 0.38) / 0.34);
+  const scatterOpacity = 1 - clamp((mergeProgress - 0.22) / 0.36);
+  const mergeOpacity = clamp((mergeProgress - 0.62) / 0.28);
   const footerCtaVisible = footerProgress > 0.22;
 
   return (
@@ -379,7 +379,7 @@ export default function Home() {
               className="absolute inset-0"
               style={{
                 opacity: scatterOpacity,
-                transform: `translateY(${mergeProgress * -16}px) scale(${1 - mergeProgress * 0.04})`,
+                transform: `translateY(${mergeProgress * -14}px) scale(${1 - mergeProgress * 0.03})`,
                 pointerEvents: "none",
               }}
             >
@@ -396,7 +396,7 @@ export default function Home() {
               className="absolute inset-0 flex items-center justify-center"
               style={{
                 opacity: mergeOpacity,
-                transform: `translateY(${(1 - mergeOpacity) * 56}px) scale(${0.93 + mergeOpacity * 0.07})`,
+                transform: `translateY(${(1 - mergeOpacity) * 42}px) scale(${0.95 + mergeOpacity * 0.05})`,
                 pointerEvents: "none",
               }}
             >
@@ -423,7 +423,7 @@ export default function Home() {
               <button className="grid h-10 w-10 place-items-center rounded-md border border-white/25">→</button>
             </div>
 
-            <div className="flex gap-4 overflow-x-auto pb-2">
+            <div className="workflows-track flex gap-4 overflow-x-auto pb-2">
               {workflowCards.map((card, idx) => (
                 <article key={card.title} className="min-w-[320px] max-w-[320px] rounded-xl bg-[#13151b] p-2" style={{ opacity: clamp(workflowsProgress + idx * 0.08) }}>
                   <div className="mb-2 text-[14px] text-white/86">{card.title}</div>
@@ -485,20 +485,20 @@ export default function Home() {
                 <a key={social} href="#" className="grid h-8 w-8 place-items-center rounded-full border border-white/45 text-[10px] uppercase text-white/86">{social}</a>
               ))}
             </div>
+
+            <Link
+              href="/sign-in?redirect_url=/workflows"
+              className={`absolute -bottom-6 -right-6 z-20 hidden items-center justify-center bg-[#eef79e] text-black transition-all duration-300 ease-out hover:bg-[#f7ffbf] md:inline-flex ${
+                footerCtaVisible
+                  ? "h-[112px] w-[280px] text-[62px] tracking-[-0.04em] opacity-100"
+                  : "pointer-events-none h-[92px] w-[220px] translate-y-12 opacity-0 text-[48px]"
+              }`}
+            >
+              Start Now
+            </Link>
           </div>
         </div>
       </footer>
-
-      <Link
-        href="/sign-in?redirect_url=/workflows"
-        className={`fixed bottom-3 right-3 z-40 hidden items-center justify-center bg-[#eef79e] text-black transition-all duration-300 ease-out hover:bg-[#f7ffbf] md:inline-flex ${
-          footerCtaVisible
-            ? "h-[112px] w-[280px] text-[62px] tracking-[-0.04em]"
-            : "pointer-events-none h-[92px] w-[220px] translate-y-14 opacity-0 text-[48px]"
-        }`}
-      >
-        Start Now
-      </Link>
 
       <style jsx>{`
         [data-reveal] {
@@ -509,6 +509,13 @@ export default function Home() {
         [data-reveal].is-visible {
           opacity: 1;
           transform: translateY(0);
+        }
+        .workflows-track {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        .workflows-track::-webkit-scrollbar {
+          display: none;
         }
       `}</style>
     </main>
