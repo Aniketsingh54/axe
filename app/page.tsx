@@ -17,6 +17,13 @@ const models = [
   "Luma ray 2",
 ];
 
+const socialLinks = [
+  { label: "LinkedIn", href: "https://www.linkedin.com" },
+  { label: "Instagram", href: "https://www.instagram.com" },
+  { label: "X", href: "https://x.com" },
+  { label: "YouTube", href: "https://www.youtube.com" },
+];
+
 const videoProps = {
   autoPlay: true,
   muted: true,
@@ -125,10 +132,26 @@ export default function Home() {
         <div className="absolute inset-0 opacity-35 [background-image:linear-gradient(to_right,rgba(255,255,255,0.4)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.4)_1px,transparent_1px)] [background-size:22px_22px]" />
         <div className="relative mx-auto max-w-[1520px]">
           <div className="grid gap-8 md:grid-cols-[0.92fr_1.08fr]">
-            <h1 className="text-[clamp(78px,10vw,132px)] font-medium leading-[0.88] tracking-[-0.045em]">Axe</h1>
+            <h1
+              className="text-[clamp(78px,10vw,132px)] font-medium leading-[0.88] tracking-[-0.045em]"
+              data-reveal
+              style={{ transitionDelay: "40ms" }}
+            >
+              Axe
+            </h1>
             <div>
-              <h2 className="text-[clamp(78px,10vw,132px)] font-medium leading-[0.88] tracking-[-0.05em]">Artistic Intelligence</h2>
-              <p className="mt-8 max-w-[650px] text-[38px] leading-[1.03] tracking-[-0.015em] text-black/70 max-lg:text-[24px] max-md:text-[18px]">
+              <h2
+                className="text-[clamp(78px,10vw,132px)] font-medium leading-[0.88] tracking-[-0.05em]"
+                data-reveal
+                style={{ transitionDelay: "120ms" }}
+              >
+                Artistic Intelligence
+              </h2>
+              <p
+                className="mt-8 max-w-[650px] text-[38px] leading-[1.03] tracking-[-0.015em] text-black/70 max-lg:text-[24px] max-md:text-[18px]"
+                data-reveal
+                style={{ transitionDelay: "180ms" }}
+              >
                 Turn your creative vision into scalable workflows. Access all AI models and professional editing tools in one node based platform.
               </p>
             </div>
@@ -144,32 +167,62 @@ export default function Home() {
               <path d="M890 355 C 980 332, 1005 242, 1050 184" stroke="#d6d6d6" strokeWidth="1.2" fill="none" />
             </svg>
 
-            <article className="col-span-3 overflow-hidden rounded-xl border border-black/8 bg-[#adb5bc] max-lg:col-span-5 max-md:col-span-6" data-parallax="0.014">
+            <article
+              className="col-span-3 overflow-hidden rounded-xl border border-black/8 bg-[#adb5bc] max-lg:col-span-5 max-md:col-span-6"
+              data-parallax="0.014"
+              data-reveal
+              style={{ transitionDelay: "120ms" }}
+            >
               <div className="px-2 pb-1 pt-2 text-[11px] uppercase tracking-[0.2em] text-black/80">3D Rodin 2.0</div>
               <img src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/681cd65ba87c69df161752e5_3d_card.avif" alt="3D model card" className="h-[232px] w-full object-cover" />
             </article>
 
-            <article className="col-span-6 row-span-2 overflow-hidden rounded-xl border border-black/8 bg-[#dbd7d6] max-lg:col-span-7 max-md:col-span-12" data-parallax="0.009">
+            <article
+              className="col-span-6 row-span-2 overflow-hidden rounded-xl border border-black/8 bg-[#dbd7d6] max-lg:col-span-7 max-md:col-span-12"
+              data-parallax="0.009"
+              data-reveal
+              style={{ transitionDelay: "180ms" }}
+            >
               <div className="px-2 pb-1 pt-2 text-[11px] uppercase tracking-[0.2em] text-black/80">Image Stable Diffusion</div>
               <img src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/681cd7cbc22419b32bb9d8d8_hcard%20-%20STABLE%20DIFFUSION.avif" alt="Stable diffusion card" className="h-[560px] w-full object-cover max-md:h-[420px]" />
             </article>
 
-            <article className="col-span-3 rounded-xl border border-black/8 bg-[#f4f4f4] p-3 text-black/60 max-lg:col-span-7 max-md:col-span-12" data-parallax="0.01">
+            <article
+              className="col-span-3 rounded-xl border border-black/8 bg-[#f4f4f4] p-3 text-black/60 max-lg:col-span-7 max-md:col-span-12"
+              data-parallax="0.01"
+              data-reveal
+              style={{ transitionDelay: "220ms" }}
+            >
               <div className="text-[11px] uppercase tracking-[0.2em] text-black/80">Text</div>
               <p className="mt-2 text-[13px] leading-tight">A Great-Tailed Grackle bird is flying from background and settling on the model&apos;s shoulder.</p>
             </article>
 
-            <article className="col-span-3 overflow-hidden rounded-xl border border-black/8 bg-[#bbc5b8] max-lg:col-span-5 max-md:col-span-6" data-parallax="0.018">
+            <article
+              className="col-span-3 overflow-hidden rounded-xl border border-black/8 bg-[#bbc5b8] max-lg:col-span-5 max-md:col-span-6"
+              data-parallax="0.018"
+              data-reveal
+              style={{ transitionDelay: "260ms" }}
+            >
               <div className="px-2 pb-1 pt-2 text-[11px] uppercase tracking-[0.2em] text-black/80">Color Reference</div>
               <img src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/681cd77722078ff43fe428f3_hcard-color%20reference.avif" alt="Color reference card" className="h-[110px] w-full object-cover" />
             </article>
 
-            <article className="col-span-3 row-span-2 overflow-hidden rounded-xl border border-black/8 bg-[#ddd8d8] max-lg:col-span-5 max-md:col-span-6" data-parallax="0.012">
+            <article
+              className="col-span-3 row-span-2 overflow-hidden rounded-xl border border-black/8 bg-[#ddd8d8] max-lg:col-span-5 max-md:col-span-6"
+              data-parallax="0.012"
+              data-reveal
+              style={{ transitionDelay: "300ms" }}
+            >
               <div className="px-2 pb-1 pt-2 text-[11px] uppercase tracking-[0.2em] text-black/80">Video Minimax Video</div>
               <video src="https://assets.weavy.ai/homepage/hero/hero_video.mp4" {...videoProps} className="h-[560px] w-full object-cover max-md:h-[420px]" />
             </article>
 
-            <article className="col-span-3 overflow-hidden rounded-xl border border-black/8 bg-[#c7cebe] max-lg:col-span-7 max-md:col-span-6" data-parallax="0.018">
+            <article
+              className="col-span-3 overflow-hidden rounded-xl border border-black/8 bg-[#c7cebe] max-lg:col-span-7 max-md:col-span-6"
+              data-parallax="0.018"
+              data-reveal
+              style={{ transitionDelay: "340ms" }}
+            >
               <div className="px-2 pb-1 pt-2 text-[11px] uppercase tracking-[0.2em] text-black/80">Image Flux Pro 1.1</div>
               <img src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/6837510acbe777269734b387_bird_desktop.avif" alt="Bird reference card" className="h-[266px] w-full object-cover" />
             </article>
@@ -190,13 +243,20 @@ export default function Home() {
       >
         <div className="mx-auto grid max-w-[1520px] gap-10 md:grid-cols-[1fr_1.15fr]">
           <div>
-            <h3 className="max-w-[530px] text-[70px] leading-[0.88] tracking-[-0.035em] max-lg:text-[48px]">Use all AI models, together at last</h3>
-            <p className="mt-8 max-w-[530px] text-[32px] leading-[1.04] tracking-[-0.02em] text-white/82 max-lg:text-[20px]">AI models and professional editing tools in one node-based platform. Turn creative vision into scalable workflows without compromising quality.</p>
+            <h3 className="max-w-[530px] text-[70px] leading-[0.88] tracking-[-0.035em] max-lg:text-[48px]" data-reveal style={{ transitionDelay: "80ms" }}>Use all AI models, together at last</h3>
+            <p className="mt-8 max-w-[530px] text-[32px] leading-[1.04] tracking-[-0.02em] text-white/82 max-lg:text-[20px]" data-reveal style={{ transitionDelay: "140ms" }}>AI models and professional editing tools in one node-based platform. Turn creative vision into scalable workflows without compromising quality.</p>
           </div>
 
           <div className="grid gap-1 text-[76px] leading-[0.92] tracking-[-0.04em] max-lg:text-[48px]">
             {models.map((model, idx) => (
-              <div key={model} className={idx === 1 ? "text-[#edf79f]" : "text-white/94"}>{model}</div>
+              <div
+                key={model}
+                className={`${idx === 1 ? "text-[#edf79f]" : "text-white/94"} model-line`}
+                data-reveal
+                style={{ transitionDelay: `${120 + idx * 36}ms` }}
+              >
+                {model}
+              </div>
             ))}
           </div>
         </div>
@@ -212,18 +272,28 @@ export default function Home() {
           </div>
 
           <div className="relative mt-12 min-h-[560px] max-lg:min-h-[420px]">
-            <img src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/68262b7678811e48ff42f7db_Frame%20427321160.avif" alt="Prompt card" className="absolute left-[8%] top-[8%] w-[240px] rounded-xl shadow-[0_16px_36px_rgba(0,0,0,0.08)] max-lg:w-[180px]" />
-            <img src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/68262b76a834003529b7f5d7_Group%207798.avif" alt="Image card" className="absolute left-[24%] top-[2%] w-[126px] rounded-xl shadow-[0_16px_36px_rgba(0,0,0,0.08)] max-lg:w-[96px]" />
-            <img src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/68262b761ffbb948a3e6f9e0_Frame%20427321155.avif" alt="Color style reference card" className="absolute left-[56%] top-[6%] w-[156px] rounded-xl shadow-[0_16px_36px_rgba(0,0,0,0.08)] max-lg:w-[112px]" />
-            <img src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/68262b7668cc066c00b3d2a2_Frame%20427321159.avif" alt="Reference card" className="absolute left-[24%] top-[48%] w-[126px] rounded-xl shadow-[0_16px_36px_rgba(0,0,0,0.08)] max-lg:w-[96px]" />
-            <img src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/68262b764367eac325e77daa_Frame%20427321158.avif" alt="Gemini card" className="absolute left-[34%] top-[56%] w-[126px] rounded-xl shadow-[0_16px_36px_rgba(0,0,0,0.08)] max-lg:w-[96px]" />
-            <img src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/68262b76e100d9cf8cc06b34_Frame%20427321157.avif" alt="Purple tree card" className="absolute left-[48%] top-[56%] w-[126px] rounded-xl shadow-[0_16px_36px_rgba(0,0,0,0.08)] max-lg:w-[96px]" />
-            <img src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/68262b763488bd282a6e4f3f_Frame%20427321156.avif" alt="Output composition card" className="absolute left-[60%] top-[8%] w-[340px] rounded-xl shadow-[0_18px_40px_rgba(0,0,0,0.1)] max-lg:left-[54%] max-lg:w-[220px]" />
+            <img src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/68262b7678811e48ff42f7db_Frame%20427321160.avif" alt="Prompt card" className="absolute left-[8%] top-[8%] w-[240px] rounded-xl shadow-[0_16px_36px_rgba(0,0,0,0.08)] max-lg:w-[180px] float-card" />
+            <img src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/68262b76a834003529b7f5d7_Group%207798.avif" alt="Image card" className="absolute left-[24%] top-[2%] w-[126px] rounded-xl shadow-[0_16px_36px_rgba(0,0,0,0.08)] max-lg:w-[96px] float-card delay-1" />
+            <img src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/68262b761ffbb948a3e6f9e0_Frame%20427321155.avif" alt="Color style reference card" className="absolute left-[56%] top-[6%] w-[156px] rounded-xl shadow-[0_16px_36px_rgba(0,0,0,0.08)] max-lg:w-[112px] float-card delay-2" />
+            <img src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/68262b7668cc066c00b3d2a2_Frame%20427321159.avif" alt="Reference card" className="absolute left-[24%] top-[48%] w-[126px] rounded-xl shadow-[0_16px_36px_rgba(0,0,0,0.08)] max-lg:w-[96px] float-card delay-3" />
+            <img src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/68262b764367eac325e77daa_Frame%20427321158.avif" alt="Gemini card" className="absolute left-[34%] top-[56%] w-[126px] rounded-xl shadow-[0_16px_36px_rgba(0,0,0,0.08)] max-lg:w-[96px] float-card delay-4" />
+            <img src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/68262b76e100d9cf8cc06b34_Frame%20427321157.avif" alt="Purple tree card" className="absolute left-[48%] top-[56%] w-[126px] rounded-xl shadow-[0_16px_36px_rgba(0,0,0,0.08)] max-lg:w-[96px] float-card delay-2" />
+            <img src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/68262b763488bd282a6e4f3f_Frame%20427321156.avif" alt="Output composition card" className="absolute left-[60%] top-[8%] w-[340px] rounded-xl shadow-[0_18px_40px_rgba(0,0,0,0.1)] max-lg:left-[54%] max-lg:w-[220px] float-card delay-1" />
           </div>
         </div>
       </section>
 
-      <footer ref={footerRef} id="pricing" className="relative overflow-hidden border-t border-white/10 bg-[#292b33] px-4 pb-14 pt-16 text-white md:px-8 md:pt-24" data-reveal>
+      <footer
+        ref={footerRef}
+        id="pricing"
+        className="relative overflow-hidden border-t border-white/10 bg-[linear-gradient(180deg,#2d2f39_0%,#242730_100%)] px-4 pb-14 pt-16 text-white md:px-8 md:pt-24"
+        data-reveal
+      >
+        <img
+          src="https://cdn.prod.website-files.com/681b040781d5b5e278a69989/682231a73b5be7ff98f935ac_footer%20Node.svg"
+          alt="Footer node connector"
+          className="pointer-events-none absolute right-[240px] top-[52px] hidden w-[120px] opacity-85 md:block"
+        />
         <Link
           href="/sign-in?redirect_url=/workflows"
           className={`absolute right-0 top-0 z-20 hidden items-center justify-center bg-[#eef79e] leading-none text-black transition-all duration-300 ease-out hover:bg-[#f7ffbf] sm:inline-flex ${
@@ -236,7 +306,7 @@ export default function Home() {
         </Link>
 
         <div className="mx-auto max-w-[1520px]">
-          <div className="grid max-w-5xl grid-cols-[auto_auto_auto] items-end gap-4 text-[52px] leading-[0.9] tracking-[-0.04em] md:text-[112px]">
+          <div className="grid max-w-5xl grid-cols-[auto_auto_auto] items-end gap-4 text-[52px] leading-[0.9] tracking-[-0.04em] md:text-[112px]" data-reveal style={{ transitionDelay: "80ms" }}>
             <div>Artificial Intelligence</div>
             <div className="text-white/60">+</div>
             <div>Human Creativity</div>
@@ -244,6 +314,7 @@ export default function Home() {
 
           <div className="mt-14 grid gap-10 md:grid-cols-[1.1fr_1fr]">
             <div>
+              <div className="mb-5 text-[16px] uppercase tracking-[0.08em] text-white/92">AXE Artistic Intelligence</div>
               <p className="max-w-md text-[14px] text-white/88">We bridge the gap between AI capabilities and human creativity while preserving craftsmanship in modern digital workflows.</p>
               <div className="mt-10 text-[12px] text-white/58">AXE © 2026. All rights reserved.</div>
             </div>
@@ -269,6 +340,23 @@ export default function Home() {
               </div>
             </div>
           </div>
+
+          <div className="mt-12 flex flex-wrap items-center justify-between gap-6 border-t border-white/10 pt-7" data-reveal style={{ transitionDelay: "160ms" }}>
+            <div className="text-[12px] uppercase tracking-[0.08em] text-white/55">Connect</div>
+            <div className="flex items-center gap-3">
+              {socialLinks.map((social) => (
+                <a
+                  key={social.label}
+                  href={social.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="grid h-8 w-8 place-items-center rounded-full border border-white/25 text-[10px] uppercase text-white/80 transition-colors hover:border-white hover:text-white"
+                >
+                  {social.label[0]}
+                </a>
+              ))}
+            </div>
+          </div>
         </div>
       </footer>
 
@@ -281,6 +369,39 @@ export default function Home() {
         [data-reveal].is-visible {
           opacity: 1;
           transform: translateY(0);
+        }
+        .model-line {
+          transform-origin: left center;
+          transition: transform 0.35s ease, color 0.25s ease;
+        }
+        .model-line:hover {
+          transform: translateX(8px);
+        }
+        .float-card {
+          animation: floatY 6.4s ease-in-out infinite;
+        }
+        .float-card.delay-1 {
+          animation-delay: 0.6s;
+        }
+        .float-card.delay-2 {
+          animation-delay: 1.2s;
+        }
+        .float-card.delay-3 {
+          animation-delay: 1.8s;
+        }
+        .float-card.delay-4 {
+          animation-delay: 2.2s;
+        }
+        @keyframes floatY {
+          0% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-8px);
+          }
+          100% {
+            transform: translateY(0);
+          }
         }
       `}</style>
     </main>
