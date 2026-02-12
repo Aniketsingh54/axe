@@ -66,9 +66,9 @@ const JSON_TOOLS = [
 ];
 
 const SAMPLE_MEDIA = {
-  imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1200&q=80',
-  imageName: 'sample-product.jpg',
-  videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+  imageUrl: '/samples/sample-product.png',
+  imageName: 'sample-product.png',
+  videoUrl: '/samples/sample-demo.mp4',
   videoName: 'sample-demo.mp4',
 };
 
@@ -78,25 +78,33 @@ export default function NodePalette({ activeTab }: NodePaletteProps) {
   const jsonInputRef = useRef<HTMLInputElement>(null);
 
   const handleLoadSample = () => {
+    const toAbsoluteUrl = (value: string) => {
+      if (!value) return '';
+      if (value.startsWith('http://') || value.startsWith('https://')) return value;
+      return new URL(value, window.location.origin).toString();
+    };
+
     // Clear existing workflow and load sample with media preloaded.
     const hydratedSampleNodes = sampleWorkflow.nodes.map((node) => {
       const nodeData = (node.data ?? {}) as Record<string, unknown>;
       if (node.type === 'upload-image') {
+        const imageValue = (nodeData.imageUrl as string) || SAMPLE_MEDIA.imageUrl;
         return {
           ...node,
           data: {
             ...nodeData,
-            imageUrl: (nodeData.imageUrl as string) || SAMPLE_MEDIA.imageUrl,
+            imageUrl: toAbsoluteUrl(imageValue),
             fileName: (nodeData.fileName as string) || SAMPLE_MEDIA.imageName,
           },
         };
       }
       if (node.type === 'upload-video') {
+        const videoValue = (nodeData.videoUrl as string) || SAMPLE_MEDIA.videoUrl;
         return {
           ...node,
           data: {
             ...nodeData,
-            videoUrl: (nodeData.videoUrl as string) || SAMPLE_MEDIA.videoUrl,
+            videoUrl: toAbsoluteUrl(videoValue),
             fileName: (nodeData.fileName as string) || SAMPLE_MEDIA.videoName,
           },
         };

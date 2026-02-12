@@ -30,7 +30,8 @@
                 "y": 550
             },
             "data": {
-                "imageUrl": "",
+                "imageUrl": "/samples/sample-product.png",
+                "fileName": "sample-product.png",
                 "label": "Upload Product Image"
             }
         },
@@ -69,7 +70,8 @@
                 "y": 800
             },
             "data": {
-                "videoUrl": "",
+                "videoUrl": "/samples/sample-demo.mp4",
+                "fileName": "sample-demo.mp4",
                 "label": "Upload Demo Video"
             }
         },
