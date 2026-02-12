@@ -65,15 +65,48 @@ const JSON_TOOLS = [
   { id: 'import', label: 'Import Workflow JSON' },
 ];
 
+const SAMPLE_MEDIA = {
+  imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1200&q=80',
+  imageName: 'sample-product.jpg',
+  videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+  videoName: 'sample-demo.mp4',
+};
+
 export default function NodePalette({ activeTab }: NodePaletteProps) {
-  const { nodes, edges, workflowId, setNodes, setEdges, setWorkflowId } = useStore();
+  const { nodes, edges, workflowId, workflowName, setNodes, setEdges, setWorkflowId, setWorkflowName } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const jsonInputRef = useRef<HTMLInputElement>(null);
 
   const handleLoadSample = () => {
-    // Clear existing workflow and load sample
+    // Clear existing workflow and load sample with media preloaded.
+    const hydratedSampleNodes = sampleWorkflow.nodes.map((node) => {
+      const nodeData = (node.data ?? {}) as Record<string, unknown>;
+      if (node.type === 'upload-image') {
+        return {
+          ...node,
+          data: {
+            ...nodeData,
+            imageUrl: (nodeData.imageUrl as string) || SAMPLE_MEDIA.imageUrl,
+            fileName: (nodeData.fileName as string) || SAMPLE_MEDIA.imageName,
+          },
+        };
+      }
+      if (node.type === 'upload-video') {
+        return {
+          ...node,
+          data: {
+            ...nodeData,
+            videoUrl: (nodeData.videoUrl as string) || SAMPLE_MEDIA.videoUrl,
+            fileName: (nodeData.fileName as string) || SAMPLE_MEDIA.videoName,
+          },
+        };
+      }
+      return node;
+    });
+
     setWorkflowId(null);
-    setNodes(sampleWorkflow.nodes);
+    setWorkflowName(sampleWorkflow.name || 'untitled');
+    setNodes(hydratedSampleNodes);
     setEdges(sampleWorkflow.edges);
   };
 
@@ -92,7 +125,7 @@ export default function NodePalette({ activeTab }: NodePaletteProps) {
   const handleExportJson = () => {
     const workflowData = {
       version: 1,
-      name: workflowId ? `workflow-${workflowId}` : 'untitled-workflow',
+      name: workflowName?.trim() || (workflowId ? `workflow-${workflowId}` : 'untitled-workflow'),
       exportedAt: new Date().toISOString(),
       nodes,
       edges,
@@ -120,6 +153,7 @@ export default function NodePalette({ activeTab }: NodePaletteProps) {
       setNodes(parsed.nodes);
       setEdges(parsed.edges);
       setWorkflowId(null);
+      setWorkflowName((parsed.name as string) || 'untitled');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       alert(`Import failed: ${message}`);

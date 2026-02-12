@@ -129,7 +129,7 @@ export default function WorkflowList({ searchQuery = '' }: WorkflowListProps) {
                                 }`}
                         >
                             <button
-                                onClick={() => loadWorkflow(workflow.id, workflow.nodes, workflow.edges)}
+                                onClick={() => loadWorkflow(workflow.id, workflow.nodes, workflow.edges, workflow.name)}
                                 className="w-full text-left"
                             >
                                 <div className="flex items-center justify-between gap-3">

@@ -3,6 +3,7 @@
 import { ReactNode, useState, useCallback, useRef, useEffect } from 'react';
 import NodePalette from '@/components/sidebar/NodePalette';
 import HistoryPanel from '@/components/sidebar/HistoryPanel';
+import { useStore } from '@/hooks/useStore';
 import { Search, Boxes, ChevronRight, FileJson } from 'lucide-react';
 
 interface AppLayoutProps {
@@ -17,6 +18,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [isCompactLeftPanel, setIsCompactLeftPanel] = useState(false);
   const [activeLeftTab, setActiveLeftTab] = useState<LeftPanelTab>('quick');
   const resizeRef = useRef<HTMLDivElement>(null);
+  const workflowName = useStore((state) => state.workflowName);
+  const setWorkflowName = useStore((state) => state.setWorkflowName);
 
   const startResizing = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -75,7 +78,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <div className="relative flex flex-1 overflow-hidden">
         <aside className={`${isCompactLeftPanel ? 'w-0' : 'w-[250px]'} transition-all duration-200 border-r border-dark-border bg-[#1e212a] overflow-hidden flex flex-col`}>
           <div className="h-14 px-4 border-b border-dark-border/80 flex items-center justify-between">
-            <span className="text-[21px] font-medium tracking-tight text-white/95">untitled</span>
+            <input
+              value={workflowName}
+              onChange={(e) => setWorkflowName(e.target.value)}
+              className="flex-1 min-w-0 bg-transparent text-[21px] font-medium tracking-tight text-white/95 outline-none border-0 placeholder:text-white/40"
+              placeholder="untitled"
+              aria-label="Workflow name"
+            />
             <button
               onClick={() => setIsCompactLeftPanel(true)}
               className="text-white/45 hover:text-white transition-colors"

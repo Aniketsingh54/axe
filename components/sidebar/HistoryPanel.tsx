@@ -333,20 +333,22 @@ export default function HistoryPanel() {
                         ''
                     }`}
                 >
-                  <span className="text-dark-text-muted shrink-0">
+                  <span className="text-dark-text-muted shrink-0 tabular-nums">
                     {formatTime(log.timestamp)}
                   </span>
                   <LogIcon level={log.level} />
-                  {log.nodeName && (
-                    <span className="text-wy-400 shrink-0">[{log.nodeName}]</span>
-                  )}
-                  <span className={`break-all ${log.level === 'error' ? 'text-red-400' :
-                    log.level === 'success' ? 'text-green-400' :
-                      log.level === 'warn' ? 'text-yellow-400' :
-                        'text-dark-text'
-                    }`}>
-                    {log.message}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    {log.nodeName && (
+                      <div className="text-wy-400 mb-0.5">[{log.nodeName}]</div>
+                    )}
+                    <div className={`min-w-0 whitespace-pre-wrap break-words leading-tight ${log.level === 'error' ? 'text-red-400' :
+                      log.level === 'success' ? 'text-green-400' :
+                        log.level === 'warn' ? 'text-yellow-400' :
+                          'text-dark-text'
+                      }`}>
+                      {log.message}
+                    </div>
+                  </div>
                 </div>
               ))
             )}

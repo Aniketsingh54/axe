@@ -40,8 +40,10 @@ type AppState = {
   setNodes: (nodes: Node[] | ((nodes: Node[]) => Node[])) => void;
   setEdges: (edges: SetEdgesFunc) => void;
   workflowId: string | null;
+  workflowName: string;
   setWorkflowId: (id: string | null) => void;
-  loadWorkflow: (id: string, nodes: Node[], edges: Edge[]) => void;
+  setWorkflowName: (name: string) => void;
+  loadWorkflow: (id: string, nodes: Node[], edges: Edge[], name?: string) => void;
   // History refresh trigger
   historyTrigger: number;
   refreshHistory: () => void;
@@ -85,6 +87,7 @@ export const useStore = create<AppState>((set, get) => ({
   nodes: [],
   edges: [],
   workflowId: null,
+  workflowName: 'untitled',
   historyTrigger: 0,
   executionLogs: [],
   isRunning: false,
@@ -175,9 +178,11 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setWorkflowId: (id) => set({ workflowId: id }),
+  setWorkflowName: (name) => set({ workflowName: name || 'untitled' }),
 
-  loadWorkflow: (id, nodes, edges) => set({
+  loadWorkflow: (id, nodes, edges, name) => set({
     workflowId: id,
+    workflowName: name || 'untitled',
     nodes,
     edges,
     past: [],
@@ -223,6 +228,7 @@ export const useStore = create<AppState>((set, get) => ({
     nodes: [],
     edges: [],
     workflowId: null,
+    workflowName: 'untitled',
     past: [],
     future: [],
     executionLogs: [],

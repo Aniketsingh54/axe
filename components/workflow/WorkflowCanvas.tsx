@@ -155,7 +155,9 @@ export default function WorkflowCanvas() {
     setEdges,
     updateNodeData,
     workflowId,
+    workflowName,
     setWorkflowId,
+    setWorkflowName,
     refreshHistory,
     addExecutionLog,
     clearExecutionLogs,
@@ -327,6 +329,7 @@ export default function WorkflowCanvas() {
         setNodes(workflow.nodes || []);
         setEdges(workflow.edges || []);
         setWorkflowId(workflow.id);
+        setWorkflowName(workflow.name || 'untitled');
         loadedWorkflowRef.current = routeWorkflowId;
       } catch (error) {
         console.error('Failed to load workflow by route id:', error);
@@ -336,7 +339,7 @@ export default function WorkflowCanvas() {
     return () => {
       cancelled = true;
     };
-  }, [searchParams, clearWorkflow, setEdges, setNodes, setWorkflowId]);
+  }, [searchParams, clearWorkflow, setEdges, setNodes, setWorkflowId, setWorkflowName]);
 
   // Handle single node execution when pendingNodeRun is set
   useEffect(() => {
@@ -465,7 +468,7 @@ export default function WorkflowCanvas() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: workflowId,
-          name: 'My Workflow',
+          name: workflowName?.trim() || 'Untitled Workflow',
           nodes: getCleanNodes(nodes),
           edges,
         }),
@@ -485,6 +488,7 @@ export default function WorkflowCanvas() {
 
       const savedWorkflow = await response.json();
       setWorkflowId(savedWorkflow.id);
+      setWorkflowName(savedWorkflow.name || workflowName || 'untitled');
       return savedWorkflow.id;
     } catch (error: any) {
       console.error('Save failed:', error);
