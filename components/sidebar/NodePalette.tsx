@@ -73,7 +73,7 @@ const SAMPLE_MEDIA = {
 };
 
 export default function NodePalette({ activeTab }: NodePaletteProps) {
-  const { nodes, edges, workflowId, workflowName, setNodes, setEdges, setWorkflowId, setWorkflowName } = useStore();
+  const { nodes, edges, workflowId, workflowName, setNodes, setEdges, setWorkflowId, setWorkflowName, updateNodeData } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const jsonInputRef = useRef<HTMLInputElement>(null);
 
@@ -82,6 +82,53 @@ export default function NodePalette({ activeTab }: NodePaletteProps) {
       if (!value) return '';
       if (value.startsWith('http://') || value.startsWith('https://')) return value;
       return new URL(value, window.location.origin).toString();
+    };
+    const isLocalSampleUrl = (value: string) => {
+      if (!value) return false;
+      if (value.startsWith('/samples/')) return true;
+      try {
+        const parsed = new URL(value);
+        return parsed.origin === window.location.origin && parsed.pathname.startsWith('/samples/');
+      } catch {
+        return false;
+      }
+    };
+
+    const uploadSampleAsset = async (nodeId: string, kind: 'image' | 'video', sourceUrl: string, fallbackName: string) => {
+      const absoluteUrl = toAbsoluteUrl(sourceUrl);
+      if (!isLocalSampleUrl(absoluteUrl)) return;
+
+      updateNodeData(nodeId, { isUploading: true });
+      try {
+        const res = await fetch(absoluteUrl);
+        if (!res.ok) throw new Error(`Failed to fetch sample asset (${res.status})`);
+
+        const blob = await res.blob();
+        const inferredName = absoluteUrl.split('/').pop() || fallbackName;
+        const file = new File([blob], inferredName, {
+          type: blob.type || (kind === 'image' ? 'image/png' : 'video/mp4'),
+        });
+
+        const { uploadFile } = await import('@/lib/blob');
+        const uploadedUrl = await uploadFile(file);
+
+        if (kind === 'image') {
+          updateNodeData(nodeId, {
+            imageUrl: uploadedUrl,
+            fileName: inferredName,
+            isUploading: false,
+          });
+        } else {
+          updateNodeData(nodeId, {
+            videoUrl: uploadedUrl,
+            fileName: inferredName,
+            isUploading: false,
+          });
+        }
+      } catch (error) {
+        console.error(`Sample ${kind} auto-upload failed for node ${nodeId}:`, error);
+        updateNodeData(nodeId, { isUploading: false });
+      }
     };
 
     // Clear existing workflow and load sample with media preloaded.
@@ -116,6 +163,21 @@ export default function NodePalette({ activeTab }: NodePaletteProps) {
     setWorkflowName(sampleWorkflow.name || 'untitled');
     setNodes(hydratedSampleNodes);
     setEdges(sampleWorkflow.edges);
+
+    // Auto-upload local sample assets to Blob so runs work from public URLs.
+    hydratedSampleNodes.forEach((node) => {
+      const nodeData = (node.data ?? {}) as Record<string, unknown>;
+      if (node.type === 'upload-image') {
+        const imageValue = (nodeData.imageUrl as string) || SAMPLE_MEDIA.imageUrl;
+        const fileName = (nodeData.fileName as string) || SAMPLE_MEDIA.imageName;
+        void uploadSampleAsset(node.id, 'image', imageValue, fileName);
+      }
+      if (node.type === 'upload-video') {
+        const videoValue = (nodeData.videoUrl as string) || SAMPLE_MEDIA.videoUrl;
+        const fileName = (nodeData.fileName as string) || SAMPLE_MEDIA.videoName;
+        void uploadSampleAsset(node.id, 'video', videoValue, fileName);
+      }
+    });
   };
 
   const filteredNodes = useMemo(() => {
