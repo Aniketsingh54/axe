@@ -75,6 +75,7 @@ const videoProps = {
 };
 
 const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
+const clampRange = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 function sectionProgress(el: HTMLElement | null) {
   if (!el) return 0;
@@ -97,6 +98,7 @@ export default function Home() {
   const outcomeRef = useRef<HTMLElement | null>(null);
   const workflowRef = useRef<HTMLElement | null>(null);
   const workflowsRef = useRef<HTMLElement | null>(null);
+  const workflowsTrackRef = useRef<HTMLDivElement | null>(null);
   const footerRef = useRef<HTMLElement | null>(null);
   const progressRef = useRef({ c: 0, t: 0, o: 0, w: 0, s: 0, f: 0 });
 
@@ -154,12 +156,40 @@ export default function Home() {
       });
     };
 
+    const handleWheel = (event: WheelEvent) => {
+      const section = workflowsRef.current;
+      const track = workflowsTrackRef.current;
+      if (!section || !track) return;
+
+      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+
+      const rect = section.getBoundingClientRect();
+      const inView = rect.top < window.innerHeight * 0.92 && rect.bottom > window.innerHeight * 0.15;
+      if (!inView) return;
+
+      const maxScrollLeft = track.scrollWidth - track.clientWidth;
+      if (maxScrollLeft <= 0) return;
+
+      const atStart = track.scrollLeft <= 1;
+      const atEnd = track.scrollLeft >= maxScrollLeft - 1;
+      const goingDown = event.deltaY > 0;
+      const goingUp = event.deltaY < 0;
+      const canConsume = (goingDown && !atEnd) || (goingUp && !atStart);
+
+      if (!canConsume) return;
+
+      event.preventDefault();
+      track.scrollLeft = clampRange(track.scrollLeft + event.deltaY * 1.18, 0, maxScrollLeft);
+    };
+
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("wheel", handleWheel, { passive: false });
     onScroll();
 
     return () => {
       observer.disconnect();
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("wheel", handleWheel);
     };
   }, []);
 
@@ -175,8 +205,8 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[#f3f4f6] text-black">
-      <header className="relative z-30 border-b border-black/8 bg-[#dfe3e8] px-4 md:px-8">
-        <div className="mx-auto flex h-[58px] max-w-[1520px] items-center justify-between">
+      <header className="sticky top-0 z-50 border-b border-black/8 bg-[#dfe3e8]/98 px-4 backdrop-blur-sm md:px-8">
+        <div className="relative mx-auto flex h-[58px] max-w-[1520px] items-center justify-between pr-[110px] md:pr-[250px]">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 bg-[linear-gradient(180deg,#1f1f1f_0_45%,transparent_45%_55%,#1f1f1f_55%_100%)]" />
             <div className="border-r border-black/25 pr-4 text-[15px] uppercase tracking-[0.03em]">AXE</div>
@@ -194,19 +224,19 @@ export default function Home() {
             <a href="#demo" className="hover:text-black">Request a Demo</a>
             <Link href="/sign-in?redirect_url=/workflows" className="hover:text-black">Sign In</Link>
           </nav>
+
+          <Link
+            href="/sign-in?redirect_url=/workflows"
+            className={`absolute right-0 top-0 hidden items-center justify-center bg-[#eef79e] leading-none text-black transition-all duration-300 ease-out hover:bg-[#f7ffbf] sm:inline-flex ${
+              isScrolled
+                ? "h-[42px] w-[128px] rounded-bl-md text-[24px] tracking-[-0.02em]"
+                : "h-[112px] w-[240px] text-[58px] tracking-[-0.04em]"
+            }`}
+          >
+            Start Now
+          </Link>
         </div>
       </header>
-
-      <Link
-        href="/sign-in?redirect_url=/workflows"
-        className={`fixed right-0 z-40 hidden items-center justify-center bg-[#eef79e] leading-none text-black transition-all duration-300 ease-out hover:bg-[#f7ffbf] sm:inline-flex ${
-          isScrolled
-            ? "top-2 h-[34px] w-[92px] rounded-bl-lg text-[14px] tracking-[-0.01em]"
-            : "top-[58px] h-[112px] w-[255px] text-[56px] tracking-[-0.04em]"
-        }`}
-      >
-        Start Now
-      </Link>
 
       <section
         className="relative overflow-hidden px-4 pb-8 pt-14 md:px-8 md:pt-20"
@@ -423,7 +453,7 @@ export default function Home() {
               <button className="grid h-10 w-10 place-items-center rounded-md border border-white/25">→</button>
             </div>
 
-            <div className="workflows-track flex gap-4 overflow-x-auto pb-2">
+            <div ref={workflowsTrackRef} className="workflows-track flex gap-4 overflow-x-auto pb-2">
               {workflowCards.map((card, idx) => (
                 <article key={card.title} className="min-w-[320px] max-w-[320px] rounded-xl bg-[#13151b] p-2" style={{ opacity: clamp(workflowsProgress + idx * 0.08) }}>
                   <div className="mb-2 text-[14px] text-white/86">{card.title}</div>
