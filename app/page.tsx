@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const models = [
   "GPT img 1",
@@ -26,6 +26,10 @@ const videoProps = {
 };
 
 export default function Home() {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isFooterCompact, setIsFooterCompact] = useState(false);
+  const footerRef = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
     const revealTargets = Array.from(document.querySelectorAll<HTMLElement>("[data-reveal]"));
 
@@ -50,6 +54,13 @@ export default function Home() {
       ticking = true;
       window.requestAnimationFrame(() => {
         const y = window.scrollY;
+        setIsScrolled(y > 52);
+
+        if (footerRef.current) {
+          const footerTop = footerRef.current.getBoundingClientRect().top;
+          setIsFooterCompact(footerTop < window.innerHeight * 0.28);
+        }
+
         parallaxNodes.forEach((node) => {
           const speed = Number(node.dataset.parallax ?? "0");
           const offset = Math.max(-32, Math.min(36, y * speed));
@@ -70,17 +81,11 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[#f3f4f6] text-black">
-      <div className="h-10 border-b border-white/15 bg-[#090d17] px-4 text-center text-[13px] text-white md:px-8">
-        <div className="mx-auto flex h-full max-w-[1520px] items-center justify-center font-medium">
-          Weavy is now a part of Figma
-        </div>
-      </div>
-
       <header className="relative z-20 border-b border-black/8 bg-[#dfe3e8] px-4 md:px-8">
         <div className="mx-auto flex h-[58px] max-w-[1520px] items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 bg-[linear-gradient(180deg,#1f1f1f_0_45%,transparent_45%_55%,#1f1f1f_55%_100%)]" />
-            <div className="border-r border-black/25 pr-4 text-[15px] uppercase tracking-[0.03em]">WEAVY</div>
+            <div className="border-r border-black/25 pr-4 text-[15px] uppercase tracking-[0.03em]">AXE</div>
             <div className="text-[15px] uppercase leading-[0.95] tracking-[0.03em]">
               ARTISTIC
               <br />
@@ -110,7 +115,11 @@ export default function Home() {
 
       <Link
         href="/sign-in?redirect_url=/workflows"
-        className="group fixed right-0 top-10 z-40 inline-flex h-[110px] w-[255px] items-center justify-center bg-[#eef79e] text-[56px] leading-none tracking-[-0.04em] text-black transition-colors hover:bg-[#f7ffbf] max-lg:h-[74px] max-lg:w-[170px] max-lg:text-[38px] max-sm:hidden"
+        className={`group fixed right-0 z-40 hidden items-center justify-center bg-[#eef79e] leading-none text-black transition-all duration-300 ease-out hover:bg-[#f7ffbf] sm:inline-flex ${
+          isScrolled
+            ? "top-2 h-[56px] w-[160px] rounded-bl-lg text-[34px] tracking-[-0.03em]"
+            : "top-[58px] h-[112px] w-[255px] text-[56px] tracking-[-0.04em]"
+        }`}
       >
         Start Now
       </Link>
@@ -127,7 +136,7 @@ export default function Home() {
         <div className="absolute inset-0 opacity-35 [background-image:linear-gradient(to_right,rgba(255,255,255,0.4)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.4)_1px,transparent_1px)] [background-size:22px_22px]" />
         <div className="relative mx-auto max-w-[1520px]">
           <div className="grid gap-8 md:grid-cols-[0.92fr_1.08fr]">
-            <h1 className="text-[clamp(78px,10vw,132px)] font-medium leading-[0.88] tracking-[-0.045em]">Weavy</h1>
+            <h1 className="text-[clamp(78px,10vw,132px)] font-medium leading-[0.88] tracking-[-0.045em]">Axe</h1>
             <div>
               <h2 className="text-[clamp(78px,10vw,132px)] font-medium leading-[0.88] tracking-[-0.05em]">
                 Artistic Intelligence
@@ -268,18 +277,35 @@ export default function Home() {
         </div>
       </section>
 
-      <footer id="pricing" className="relative overflow-hidden bg-[#2a2d36] px-4 pb-14 pt-16 text-white md:px-8 md:pt-24" data-reveal>
+      <footer
+        ref={footerRef}
+        id="pricing"
+        className="relative overflow-hidden border-t border-white/10 bg-[#292b33] px-4 pb-14 pt-16 text-white md:px-8 md:pt-24"
+        data-reveal
+      >
+        <Link
+          href="/sign-in?redirect_url=/workflows"
+          className={`absolute right-0 top-0 z-20 hidden items-center justify-center bg-[#eef79e] leading-none text-black transition-all duration-300 ease-out hover:bg-[#f7ffbf] sm:inline-flex ${
+            isFooterCompact
+              ? "h-[58px] w-[162px] rounded-bl-lg text-[34px] tracking-[-0.03em]"
+              : "h-[106px] w-[242px] text-[56px] tracking-[-0.04em]"
+          }`}
+        >
+          Start Now
+        </Link>
+
         <div className="mx-auto max-w-[1520px]">
-          <div className="max-w-5xl text-[52px] leading-[0.9] tracking-[-0.04em] md:text-[106px]">
+          <div className="max-w-5xl text-[52px] leading-[0.9] tracking-[-0.04em] md:text-[112px]">
             Artificial Intelligence + Human Creativity
           </div>
-          <div className="mt-12 grid gap-8 md:grid-cols-[1.2fr_1fr]">
+
+          <div className="mt-14 grid gap-8 md:grid-cols-[1.2fr_1fr]">
             <div>
               <p className="max-w-md text-[14px] text-white/88">
                 We bridge the gap between AI capabilities and human creativity while preserving craftsmanship in modern
                 digital workflows.
               </p>
-              <div className="mt-8 text-[12px] text-white/58">AXE © 2026. All rights reserved.</div>
+              <div className="mt-10 text-[12px] text-white/58">AXE © 2026. All rights reserved.</div>
             </div>
             <div id="demo" className="grid grid-cols-2 gap-8 text-[13px] text-white/78">
               <div className="space-y-2">
